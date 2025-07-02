@@ -293,9 +293,9 @@ Agregá `rem-common` en tu `go.work` para desarrollo en monorepo y tendrás auto
 ```bash
 # En la raíz del proyecto
 go work init
-go work use ./services/rem-common
-go work use ./services/auth-identity
-go work use ./services/profile
+go work use ./rem-common
+go work use ./auth-identity
+go work use ./profile
 # ... otros servicios
 ```
 
