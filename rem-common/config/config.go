@@ -68,5 +68,5 @@ type Config struct {
 	Rabbit           RabbitConfig
 	Logger           LoggerConfig
 	Server           ServerConfig
-	APIKey           string // REM_API_KEY: clave secreta que usa este servicio
+	APIKey           string `envconfig:"API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
 }

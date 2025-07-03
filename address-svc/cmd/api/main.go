@@ -23,8 +23,9 @@ func main() {
 		lg.Fatal("fatal: no pude conectar a Postgres", zap.Error(err))
 	}
 
-	repo := repository.New(pg)
-	ctrl := controller.New(services.New(repo))
+	repo := repository.New(pg, lg)
+	svc := services.New(repo, lg)
+	ctrl := controller.New(svc)
 
 	r := gin.New()
 	r.Use(
