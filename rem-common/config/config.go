@@ -60,7 +60,7 @@ type ServerConfig struct {
 // Config engloba todo, incluyendo el driver relacional
 type Config struct {
 	// DriverRelacional elige "postgres" o "mysql"
-	DriverRelacional string // REM_DB_DRIVER (postgres|mysql)
+	DriverRelacional string `envconfig:"DB_DRIVER"`
 	Postgres         PostgresConfig
 	MySQL            MySQLConfig
 	Mongo            MongoConfig

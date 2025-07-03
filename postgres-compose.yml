@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine      # usa la imagen oficial, livianita
+    container_name: postgres_local
+    restart: unless-stopped        # si reiniciás la compu vuelve solo
+    environment:
+      POSTGRES_USER: lucho
+      POSTGRES_PASSWORD: supersecreta
+      POSTGRES_DB: remgestion
+      # PGDATA: /var/lib/postgresql/data/pgdata  # opcional: cambia path interno
+    ports:
+      - "5432:5432"                # localhost:5432 → contenedor:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # persiste los datos afuera
+
+volumes:
+  pgdata:                          # volumen nombrado, queda en ~/.docker/volumes

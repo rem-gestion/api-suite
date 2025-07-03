@@ -105,7 +105,8 @@ func runMongoMigrate(cfg config.MongoConfig, migrationsPath, direction string) e
 
 func applyMigrations(driver database.Driver, dbName, migrationsPath, direction string) error {
 	abs, _ := filepath.Abs(migrationsPath)
-	m, err := migrate.NewWithDatabaseInstance("file://"+abs, dbName, driver)
+	srcURL := "file://" + filepath.ToSlash(abs) // <- FIX para Windows
+	m, err := migrate.NewWithDatabaseInstance(srcURL, dbName, driver)
 	if err != nil {
 		return err
 	}
