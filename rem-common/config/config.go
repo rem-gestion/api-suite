@@ -57,15 +57,22 @@ type ServerConfig struct {
 	Port int // REM_SERVER_PORT
 }
 
-// Config engloba todo, incluyendo el driver relacional
+// GRPCConfig define la configuración del servidor gRPC
+// - Host: dirección IP o nombre de host donde escucha el servidor gRPC
+// - Port: puerto en el que escucha el servidor gRPC
+type GRPCConfig struct {
+	Host string `envconfig:"GRPC_HOST" default:"0.0.0.0"`
+	Port int    `envconfig:"GRPC_PORT" default:"50051"`
+}
+
 type Config struct {
-	// DriverRelacional elige "postgres" o "mysql"
 	DriverRelacional string `envconfig:"DB_DRIVER"`
 	Postgres         PostgresConfig
 	MySQL            MySQLConfig
 	Mongo            MongoConfig
 	Redis            RedisConfig
 	Rabbit           RabbitConfig
+	GRPC             GRPCConfig
 	Logger           LoggerConfig
 	Server           ServerConfig
 	APIKey           string `envconfig:"API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
