@@ -6,7 +6,7 @@ type PostgresConfig struct {
 	Port     int    // REM_POSTGRES_PORT
 	User     string // REM_POSTGRES_USER
 	Password string // REM_POSTGRES_PASSWORD
-	DBName   string // REM_POSTGRES_DB
+	DBName   string // REM_POSTGRES_DBNAME
 	SSLMode  string // REM_POSTGRES_SSLMODE
 }
 
