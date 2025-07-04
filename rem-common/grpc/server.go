@@ -46,11 +46,15 @@ func unaryLogger(lg *zap.Logger) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+
 		start := time.Now()
 		resp, err := handler(ctx, req)
+
+		elapMs := float64(time.Since(start).Microseconds()) / 1_000
+
 		lg.Info("grpc unary",
 			zap.String("method", info.FullMethod),
-			zap.Duration("latency_ms", time.Since(start)),
+			zap.Float64("latency_ms", elapMs),
 			zap.Error(err),
 		)
 		return resp, err
@@ -60,11 +64,15 @@ func unaryLogger(lg *zap.Logger) grpc.UnaryServerInterceptor {
 func streamLogger(lg *zap.Logger) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream,
 		info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+
 		start := time.Now()
 		err := handler(srv, ss)
+
+		elapMs := float64(time.Since(start).Microseconds()) / 1_000
+
 		lg.Info("grpc stream",
 			zap.String("method", info.FullMethod),
-			zap.Duration("latency_ms", time.Since(start)),
+			zap.Float64("latency_ms", elapMs),
 			zap.Error(err),
 		)
 		return err

@@ -1,3 +1,4 @@
+// middleware/logging.go
 package middleware
 
 import (
@@ -17,7 +18,7 @@ func GinLogger(lg *zap.Logger) gin.HandlerFunc {
 		c.Next()
 
 		code := c.Writer.Status()
-		elap := float64(time.Since(start).Microseconds()) / 1000 // ms con decimales
+		elapMs := float64(time.Since(start).Microseconds()) / 1_000 // → ms con 1 dec
 
 		level := zap.InfoLevel
 		switch {
@@ -32,7 +33,7 @@ func GinLogger(lg *zap.Logger) gin.HandlerFunc {
 				zap.String("method", c.Request.Method),
 				zap.String("path", c.Request.URL.Path),
 				zap.Int("status", code),
-				zap.Float64("latency_ms", elap),
+				zap.Float64("latency_ms", elapMs),
 			)
 		}
 	}

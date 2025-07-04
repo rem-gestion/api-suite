@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package address.v1;
+option go_package = "github.com/rem-gestion/api-suite/address/internal/pb;pb";
+
+message Address {
+  string id      = 1;
+  string floor   = 2;
+  string unit    = 3;
+  string street  = 4;
+  int32  number  = 5;
+  string city    = 6;
+  string state   = 7;
+  string zip     = 8;
+  string country = 9;
+}
+
+message CreateAddressRequest  { Address address = 1; }
+message CreateAddressResponse { Address address = 1; }
+
+message GetAddressRequest  { string id = 1; }
+message GetAddressResponse { Address address = 1; }
+
+service AddressService {
+  rpc Create (CreateAddressRequest) returns (CreateAddressResponse);
+  rpc Get    (GetAddressRequest)    returns (GetAddressResponse);
+}
