@@ -2,6 +2,6 @@ go 1.24.4
 
 use (
 	./address-svc
-	./auth-identity
+	./person-svc
 	./rem-common
 )
