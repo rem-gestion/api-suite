@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v4.25.3
-// source: proto/address.proto
+// source: protos/address/v1/address.proto
 
-package pb
+package addresspb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -38,7 +38,7 @@ type Address struct {
 
 func (x *Address) Reset() {
 	*x = Address{}
-	mi := &file_proto_address_proto_msgTypes[0]
+	mi := &file_protos_address_v1_address_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +50,7 @@ func (x *Address) String() string {
 func (*Address) ProtoMessage() {}
 
 func (x *Address) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_address_proto_msgTypes[0]
+	mi := &file_protos_address_v1_address_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +63,7 @@ func (x *Address) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Address.ProtoReflect.Descriptor instead.
 func (*Address) Descriptor() ([]byte, []int) {
-	return file_proto_address_proto_rawDescGZIP(), []int{0}
+	return file_protos_address_v1_address_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Address) GetId() string {
@@ -138,7 +138,7 @@ type CreateAddressRequest struct {
 
 func (x *CreateAddressRequest) Reset() {
 	*x = CreateAddressRequest{}
-	mi := &file_proto_address_proto_msgTypes[1]
+	mi := &file_protos_address_v1_address_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -150,7 +150,7 @@ func (x *CreateAddressRequest) String() string {
 func (*CreateAddressRequest) ProtoMessage() {}
 
 func (x *CreateAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_address_proto_msgTypes[1]
+	mi := &file_protos_address_v1_address_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -163,7 +163,7 @@ func (x *CreateAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAddressRequest.ProtoReflect.Descriptor instead.
 func (*CreateAddressRequest) Descriptor() ([]byte, []int) {
-	return file_proto_address_proto_rawDescGZIP(), []int{1}
+	return file_protos_address_v1_address_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CreateAddressRequest) GetAddress() *Address {
@@ -182,7 +182,7 @@ type CreateAddressResponse struct {
 
 func (x *CreateAddressResponse) Reset() {
 	*x = CreateAddressResponse{}
-	mi := &file_proto_address_proto_msgTypes[2]
+	mi := &file_protos_address_v1_address_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -194,7 +194,7 @@ func (x *CreateAddressResponse) String() string {
 func (*CreateAddressResponse) ProtoMessage() {}
 
 func (x *CreateAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_address_proto_msgTypes[2]
+	mi := &file_protos_address_v1_address_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -207,7 +207,7 @@ func (x *CreateAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAddressResponse.ProtoReflect.Descriptor instead.
 func (*CreateAddressResponse) Descriptor() ([]byte, []int) {
-	return file_proto_address_proto_rawDescGZIP(), []int{2}
+	return file_protos_address_v1_address_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateAddressResponse) GetAddress() *Address {
@@ -226,7 +226,7 @@ type GetAddressRequest struct {
 
 func (x *GetAddressRequest) Reset() {
 	*x = GetAddressRequest{}
-	mi := &file_proto_address_proto_msgTypes[3]
+	mi := &file_protos_address_v1_address_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +238,7 @@ func (x *GetAddressRequest) String() string {
 func (*GetAddressRequest) ProtoMessage() {}
 
 func (x *GetAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_address_proto_msgTypes[3]
+	mi := &file_protos_address_v1_address_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +251,7 @@ func (x *GetAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressRequest.ProtoReflect.Descriptor instead.
 func (*GetAddressRequest) Descriptor() ([]byte, []int) {
-	return file_proto_address_proto_rawDescGZIP(), []int{3}
+	return file_protos_address_v1_address_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetAddressRequest) GetId() string {
@@ -270,7 +270,7 @@ type GetAddressResponse struct {
 
 func (x *GetAddressResponse) Reset() {
 	*x = GetAddressResponse{}
-	mi := &file_proto_address_proto_msgTypes[4]
+	mi := &file_protos_address_v1_address_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -282,7 +282,7 @@ func (x *GetAddressResponse) String() string {
 func (*GetAddressResponse) ProtoMessage() {}
 
 func (x *GetAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_address_proto_msgTypes[4]
+	mi := &file_protos_address_v1_address_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -295,7 +295,7 @@ func (x *GetAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressResponse.ProtoReflect.Descriptor instead.
 func (*GetAddressResponse) Descriptor() ([]byte, []int) {
-	return file_proto_address_proto_rawDescGZIP(), []int{4}
+	return file_protos_address_v1_address_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetAddressResponse) GetAddress() *Address {
@@ -305,11 +305,11 @@ func (x *GetAddressResponse) GetAddress() *Address {
 	return nil
 }
 
-var File_proto_address_proto protoreflect.FileDescriptor
+var File_protos_address_v1_address_proto protoreflect.FileDescriptor
 
-const file_proto_address_proto_rawDesc = "" +
+const file_protos_address_v1_address_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/address.proto\x12\n" +
+	"\x1fprotos/address/v1/address.proto\x12\n" +
 	"address.v1\"\xc9\x01\n" +
 	"\aAddress\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
@@ -331,29 +331,29 @@ const file_proto_address_proto_rawDesc = "" +
 	"\aaddress\x18\x01 \x01(\v2\x13.address.v1.AddressR\aaddress2\xa5\x01\n" +
 	"\x0eAddressService\x12M\n" +
 	"\x06Create\x12 .address.v1.CreateAddressRequest\x1a!.address.v1.CreateAddressResponse\x12D\n" +
-	"\x03Get\x12\x1d.address.v1.GetAddressRequest\x1a\x1e.address.v1.GetAddressResponseB9Z7github.com/rem-gestion/api-suite/address/internal/pb;pbb\x06proto3"
+	"\x03Get\x12\x1d.address.v1.GetAddressRequest\x1a\x1e.address.v1.GetAddressResponseB?Z=github.com/rem-gestion/rem-common/protos/address/v1;addresspbb\x06proto3"
 
 var (
-	file_proto_address_proto_rawDescOnce sync.Once
-	file_proto_address_proto_rawDescData []byte
+	file_protos_address_v1_address_proto_rawDescOnce sync.Once
+	file_protos_address_v1_address_proto_rawDescData []byte
 )
 
-func file_proto_address_proto_rawDescGZIP() []byte {
-	file_proto_address_proto_rawDescOnce.Do(func() {
-		file_proto_address_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_address_proto_rawDesc), len(file_proto_address_proto_rawDesc)))
+func file_protos_address_v1_address_proto_rawDescGZIP() []byte {
+	file_protos_address_v1_address_proto_rawDescOnce.Do(func() {
+		file_protos_address_v1_address_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_address_v1_address_proto_rawDesc), len(file_protos_address_v1_address_proto_rawDesc)))
 	})
-	return file_proto_address_proto_rawDescData
+	return file_protos_address_v1_address_proto_rawDescData
 }
 
-var file_proto_address_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_proto_address_proto_goTypes = []any{
+var file_protos_address_v1_address_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_protos_address_v1_address_proto_goTypes = []any{
 	(*Address)(nil),               // 0: address.v1.Address
 	(*CreateAddressRequest)(nil),  // 1: address.v1.CreateAddressRequest
 	(*CreateAddressResponse)(nil), // 2: address.v1.CreateAddressResponse
 	(*GetAddressRequest)(nil),     // 3: address.v1.GetAddressRequest
 	(*GetAddressResponse)(nil),    // 4: address.v1.GetAddressResponse
 }
-var file_proto_address_proto_depIdxs = []int32{
+var file_protos_address_v1_address_proto_depIdxs = []int32{
 	0, // 0: address.v1.CreateAddressRequest.address:type_name -> address.v1.Address
 	0, // 1: address.v1.CreateAddressResponse.address:type_name -> address.v1.Address
 	0, // 2: address.v1.GetAddressResponse.address:type_name -> address.v1.Address
@@ -368,26 +368,26 @@ var file_proto_address_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_proto_address_proto_init() }
-func file_proto_address_proto_init() {
-	if File_proto_address_proto != nil {
+func init() { file_protos_address_v1_address_proto_init() }
+func file_protos_address_v1_address_proto_init() {
+	if File_protos_address_v1_address_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_address_proto_rawDesc), len(file_proto_address_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_address_v1_address_proto_rawDesc), len(file_protos_address_v1_address_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_address_proto_goTypes,
-		DependencyIndexes: file_proto_address_proto_depIdxs,
-		MessageInfos:      file_proto_address_proto_msgTypes,
+		GoTypes:           file_protos_address_v1_address_proto_goTypes,
+		DependencyIndexes: file_protos_address_v1_address_proto_depIdxs,
+		MessageInfos:      file_protos_address_v1_address_proto_msgTypes,
 	}.Build()
-	File_proto_address_proto = out.File
-	file_proto_address_proto_goTypes = nil
-	file_proto_address_proto_depIdxs = nil
+	File_protos_address_v1_address_proto = out.File
+	file_protos_address_v1_address_proto_goTypes = nil
+	file_protos_address_v1_address_proto_depIdxs = nil
 }

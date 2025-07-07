@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v4.25.3
-// source: proto/address.proto
+// source: protos/address/v1/address.proto
 
-package pb
+package addresspb
 
 import (
 	context "context"
@@ -155,5 +155,5 @@ var AddressService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/address.proto",
+	Metadata: "protos/address/v1/address.proto",
 }

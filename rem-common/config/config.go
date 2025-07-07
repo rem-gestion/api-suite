@@ -65,6 +65,11 @@ type GRPCConfig struct {
 	Port int    `envconfig:"GRPC_PORT" default:"50051"`
 }
 
+type AddressServiceConfig struct {
+	Host string `envconfig:"ADDRESS_HOST" default:"address-svc"`
+	Port int    `envconfig:"ADDRESS_PORT" default:"50052"`
+}
+
 type Config struct {
 	DriverRelacional string `envconfig:"DB_DRIVER"`
 	Postgres         PostgresConfig
@@ -72,8 +77,11 @@ type Config struct {
 	Mongo            MongoConfig
 	Redis            RedisConfig
 	Rabbit           RabbitConfig
-	GRPC             GRPCConfig
-	Logger           LoggerConfig
-	Server           ServerConfig
-	APIKey           string `envconfig:"API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
+
+	GRPC    GRPCConfig
+	Address AddressServiceConfig
+
+	Logger LoggerConfig
+	Server ServerConfig
+	APIKey string `envconfig:"API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
 }

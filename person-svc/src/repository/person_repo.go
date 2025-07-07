@@ -1,138 +1,158 @@
 package repository
 
 import (
-	model "github.com/rem-gestion/api-suite/person/src/models"
+	"fmt"
+	"strings"
+
+	"github.com/rem-gestion/api-suite/person/src/models"
+	rerrors "github.com/rem-gestion/rem-common/errors"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+/* ───────────────── struct & ctor ────────────────── */
 
 type PersonRepo struct {
 	db *gorm.DB
 	lg *zap.Logger
 }
 
-func New(db *gorm.DB, lg *zap.Logger) *PersonRepo {
-	return &PersonRepo{db: db, lg: lg.Named("repo")}
+func NewPersonRepo(db *gorm.DB, lg *zap.Logger) *PersonRepo {
+	return &PersonRepo{db: db, lg: lg}
 }
 
-/* ---------- CRUD ---------- */
+/* ───────────────── Personas CRUD ─────────────────── */
 
-func (r *PersonRepo) Create(p *model.Person) (*model.Person, error) {
-	// Begin transaction for person creation with sub-entities
-	tx := r.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Create the main Person record
-	if err := tx.Create(p).Error; err != nil {
-		tx.Rollback()
-		r.lg.Error("person creation failed", zap.Error(err))
-		return nil, err
-	}
-
-	// Create sub-entity based on type
-	if p.Type == model.PersonIndividual && p.Individual != nil {
-		p.Individual.PersonID = p.ID
-		if err := tx.Create(p.Individual).Error; err != nil {
-			tx.Rollback()
-			r.lg.Error("individual creation failed", zap.Error(err))
-			return nil, err
-		}
-	} else if p.Type == model.PersonCompany && p.Company != nil {
-		p.Company.PersonID = p.ID
-		if err := tx.Create(p.Company).Error; err != nil {
-			tx.Rollback()
-			r.lg.Error("company creation failed", zap.Error(err))
-			return nil, err
-		}
-	}
-
-	// Commit transaction
-	if err := tx.Commit().Error; err != nil {
-		r.lg.Error("transaction commit failed", zap.Error(err))
-		return nil, err
-	}
-
-	r.lg.Info("person created", zap.String("id", p.ID.String()))
-	return p, nil
+func (r *PersonRepo) Create(p *models.Person) (*models.Person, error) {
+	err := r.withTx(func(tx *gorm.DB) error {
+		return tx.Create(p).Error
+	})
+	return p, err
 }
 
-func (r *PersonRepo) Get(id string) (*model.Person, error) {
-	var p model.Person
-
-	// Load person with sub-entities
-	if err := r.db.Preload("Individual").Preload("Company").Preload("Contactos").
-		First(&p, "id = ?", id).Error; err != nil {
-		r.lg.Warn("get person failed", zap.String("id", id), zap.Error(err))
-		return nil, err
-	}
-	return &p, nil
+func (r *PersonRepo) Get(id string) (*models.Person, error) {
+	var p models.Person
+	err := r.preloads(r.db).
+		First(&p, "id = ?", id).Error
+	return &p, err
 }
 
-func (r *PersonRepo) List(personType string, limit, offset int) ([]model.Person, error) {
-	var res []model.Person
-	q := r.db.Preload("Individual").Preload("Company").Preload("Contactos").
+func (r *PersonRepo) List(search string, pType *models.PersonType, limit, offset int) ([]models.Person, int64, error) {
+	var list []models.Person
+	var total int64
+
+	q := r.preloads(r.db.Model(&models.Person{})).
 		Limit(limit).Offset(offset)
 
-	if personType != "" {
-		q = q.Where("type = ?", personType)
+	if pType != nil {
+		q = q.Where("type = ?", *pType)
 	}
 
-	if err := q.Find(&res).Error; err != nil {
-		r.lg.Warn("list persons failed", zap.Error(err))
-		return nil, err
+	if s := strings.TrimSpace(search); s != "" {
+		sLike := fmt.Sprintf("%%%s%%", s)
+		q = q.Joins(`
+			LEFT JOIN individual ON individual.person_id = person.id
+			LEFT JOIN company    ON company.person_id    = person.id`).
+			Where(`
+				lower(individual.first_name) LIKE lower(?) OR
+				lower(individual.last_name)  LIKE lower(?) OR
+				individual.dni               = ?          OR
+				lower(company.legal_name)    LIKE lower(?) OR
+				company.cuit                 = ?`,
+				sLike, sLike, s, sLike, s)
 	}
-	return res, nil
+
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := q.Order("created_at DESC").Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
 }
 
-func (r *PersonRepo) Update(p *model.Person) error {
-	tx := r.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Update main Person record
-	if err := tx.Save(p).Error; err != nil {
-		tx.Rollback()
-		r.lg.Error("person update failed", zap.Error(err))
-		return err
-	}
-
-	// Update sub-entity based on type
-	if p.Type == model.PersonIndividual && p.Individual != nil {
-		if err := tx.Save(p.Individual).Error; err != nil {
-			tx.Rollback()
-			r.lg.Error("individual update failed", zap.Error(err))
-			return err
-		}
-	} else if p.Type == model.PersonCompany && p.Company != nil {
-		if err := tx.Save(p.Company).Error; err != nil {
-			tx.Rollback()
-			r.lg.Error("company update failed", zap.Error(err))
-			return err
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		r.lg.Error("transaction commit failed", zap.Error(err))
-		return err
-	}
-
-	r.lg.Info("person updated", zap.String("id", p.ID.String()))
-	return nil
+func (r *PersonRepo) Update(p *models.Person) error {
+	return r.withTx(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{FullSaveAssociations: true}).Updates(p).Error
+	})
 }
 
 func (r *PersonRepo) Delete(id string) error {
-	// Soft delete will cascade to sub-entities due to GORM constraints
-	if err := r.db.Delete(&model.Person{}, "id = ?", id).Error; err != nil {
-		r.lg.Error("delete person failed", zap.String("id", id), zap.Error(err))
+	return r.db.Delete(&models.Person{}, "id = ?", id).Error
+}
+
+/* ───────────────── Contactos CRUD ────────────────── */
+
+func (r *PersonRepo) AddContact(c *models.Contacto) (*models.Contacto, error) {
+	err := r.withTx(func(tx *gorm.DB) error {
+		if c.IsPrimary {
+			if err := tx.Model(&models.Contacto{}).
+				Where("persona_id = ?", c.PersonaID).
+				Update("is_primary", false).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Create(c).Error
+	})
+	return c, err
+}
+
+func (r *PersonRepo) UpdateContact(id string, up map[string]any) (*models.Contacto, error) {
+	var contact models.Contacto
+	err := r.withTx(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&contact, "id = ?", id).Error; err != nil {
+			return err
+		}
+		if v, ok := up["is_primary"]; ok && v.(bool) {
+			if err := tx.Model(&models.Contacto{}).
+				Where("persona_id = ?", contact.PersonaID).
+				Update("is_primary", false).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Model(&contact).Updates(up).Error
+	})
+	return &contact, err
+}
+
+func (r *PersonRepo) DeleteContact(id string) error {
+	return r.db.Delete(&models.Contacto{}, "id = ?", id).Error
+}
+
+func (r *PersonRepo) ListContacts(personID string) ([]models.Contacto, error) {
+	var list []models.Contacto
+	err := r.db.Where("persona_id = ?", personID).
+		Order("is_primary DESC, created_at DESC").
+		Find(&list).Error
+	return list, err
+}
+
+/* ───────────────── helpers internos ───────────────── */
+
+func (r *PersonRepo) preloads(q *gorm.DB) *gorm.DB {
+	return q.
+		Preload("Individual").
+		Preload("Company").
+		Preload("Contactos")
+}
+
+// withTx envuelve una fn en BEGIN / COMMIT / ROLLBACK.
+// Devuelve el error que retorne la fn o de Commit.
+func (r *PersonRepo) withTx(fn func(*gorm.DB) error) error {
+	tx := r.db.Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+		}
+	}()
+	if err := fn(tx); err != nil {
+		tx.Rollback()
 		return err
 	}
-	r.lg.Info("person deleted", zap.String("id", id))
+	if err := tx.Commit().Error; err != nil {
+		return &rerrors.InternalServerError{Msg: err.Error()}
+	}
 	return nil
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/rem-gestion/api-suite/address/src/router"
 	"github.com/rem-gestion/api-suite/address/src/services"
 
-	pb "github.com/rem-gestion/api-suite/address/internal/pb"
+	pb "github.com/rem-gestion/rem-common/protos/address/v1"
 )
 
 func main() {

@@ -1,3 +1,4 @@
+// cmd/api/main.go
 package main
 
 import (
@@ -11,39 +12,53 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/keepalive"
 
+	/* ───── rem-common ───── */
 	"github.com/rem-gestion/rem-common/config"
+	"github.com/rem-gestion/rem-common/db"
 	rcgrpc "github.com/rem-gestion/rem-common/grpc"
 	"github.com/rem-gestion/rem-common/logger"
 	mw "github.com/rem-gestion/rem-common/middleware"
 
-	"github.com/rem-gestion/rem-common/db"
-	"go.uber.org/zap"
-	"google.golang.org/grpc/keepalive"
+	/* ───── protos ───── */
+	personpb "github.com/rem-gestion/rem-common/protos/person/v1"
 
+	/* ───── capas locales ───── */
 	controller "github.com/rem-gestion/api-suite/person/src/controllers"
 	grpcHandler "github.com/rem-gestion/api-suite/person/src/grpc"
 	"github.com/rem-gestion/api-suite/person/src/repository"
 	"github.com/rem-gestion/api-suite/person/src/router"
 	"github.com/rem-gestion/api-suite/person/src/services"
-
-	pb "github.com/rem-gestion/api-suite/person/internal/pb"
 )
 
 func main() {
+	/* ---------- carga de config & logger ---------- */
 	cfg := config.Load()
 	lg := logger.New(cfg.Logger, "person-svc")
 
-	/* DB ------------------------------------------------- */
+	/* ---------- Postgres ---------- */
 	pg, err := db.NewPostgres(cfg.Postgres)
 	if err != nil {
 		lg.Fatal("postgres connect failed", zap.Error(err))
 	}
-	repo := repository.New(pg, lg.Named("repo"))
-	svc := services.New(repo, lg)
+
+	repo := repository.NewPersonRepo(pg, lg.Named("repo"))
+
+	/* ---------- dial a address-svc ---------- */
+	addrTarget := fmt.Sprintf("%s:%d", cfg.Address.Host, cfg.Address.Port)
+	addrConn, err := rcgrpc.Dial(addrTarget) // helper con timeout & keep-alive
+	if err != nil {
+		lg.Fatal("dial address-svc failed", zap.Error(err))
+	}
+	defer addrConn.Close()
+
+	/* ---------- servicio de dominio ---------- */
+	svc := services.New(repo, addrConn, lg)
 	ctrl := controller.New(svc)
 
-	/* REST ---------------------------------------------- */
+	/* ---------- HTTP ---------- */
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(
@@ -53,24 +68,24 @@ func main() {
 		mw.RecoveryWithZap(lg),
 		mw.ErrorHandler(),
 	)
-	router.Setup(r, ctrl)
+	router.Setup(r, ctrl) // /persons, /contacts…
 	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
 	httpSrv := &http.Server{Addr: ":4000", Handler: r}
 
-	/* gRPC ---------------------------------------------- */
+	/* ---------- gRPC ---------- */
 	kp := keepalive.ServerParameters{Time: 2 * time.Hour, Timeout: 20 * time.Second}
 	grpcSrv := rcgrpc.NewServer(lg, kp)
 	grpcAddr := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
 
-	pb.RegisterPersonServiceServer(grpcSrv, grpcHandler.New(svc))
+	personpb.RegisterPersonServiceServer(grpcSrv, grpcHandler.New(svc))
 
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		lg.Fatal("grpc listen failed", zap.Error(err))
 	}
 
-	/* arrancamos ambos en paralelo ---------------------- */
+	/* ---------- lanzamos ambos servidores ---------- */
 	go func() {
 		lg.Info("REST listening", zap.String("addr", httpSrv.Addr))
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -84,7 +99,7 @@ func main() {
 		}
 	}()
 
-	/* graceful-shutdown --------------------------------- */
+	/* ---------- graceful-shutdown ---------- */
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit

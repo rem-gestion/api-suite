@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package rem.person.v1;
 
-option go_package = "github.com/rem-gestion/api-suite/person/internal/pb;pb";
+option go_package = "github.com/rem-gestion/rem-common/protos/person/v1;personpb";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
@@ -43,13 +43,25 @@ service PersonService {
   rpc ListContacts     (ListContactsRequest)     returns (ListContactsResponse);
 }
 
+/* ─────────────────────  ADDRESS PAYLOAD  ──────────────────── */
+message AddressPayload {
+  string floor   = 1;
+  string unit    = 2;
+  string street  = 3;
+  int32  number  = 4;
+  string city    = 5;
+  string state   = 6;
+  string zip     = 7;
+  string country = 8; // ISO-3166-1 alpha-2
+}
+
 /* ─────────────────────────  PERSON  ───────────────────────── */
 message PersonResponse {
   string id                      = 1;
   PersonType type                = 2;
-  string address_id              = 3;   // puede ser vacío
-  string avatar_url              = 4;   // puede ser vacío
-  Sexo sexo                      = 5;
+  string address_id              = 3;
+  string avatar_url              = 4;
+  Sexo   sexo                    = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
 
@@ -85,28 +97,38 @@ message Contact {
 /* ───────────────────────  REQUESTS  ───────────────────────── */
 // Personas
 message CreatePersonRequest {
-  PersonType type   = 1;                                  // required
-  string address_id = 2;
-  string avatar_url = 3;
-  Sexo sexo         = 4;
+  PersonType type = 1;                         // required
 
-  oneof details {                                         // required uno
-    CreateIndividual individual = 5;
-    CreateCompany    company    = 6;
+  oneof address {                              // ─ escenario 1 / 2
+    string         address_id     = 2;
+    AddressPayload address_payload = 3;
   }
 
-  repeated AddContactPayload contacts = 7;                // opcional
+  string avatar_url = 4;
+  Sexo   sexo       = 5;
+
+  oneof details {                              // required uno
+    CreateIndividual individual = 6;
+    CreateCompany    company    = 7;
+  }
+
+  repeated AddContactPayload contacts = 8;     // opcional
 }
 
 message UpdatePersonRequest {
-  string id        = 1;                                   // required
-  string address_id = 2;
-  string avatar_url = 3;
-  Sexo sexo         = 4;
+  string id = 1;                               // required
+
+  oneof address {
+    string         address_id      = 2;
+    AddressPayload address_payload = 3;
+  }
+
+  string avatar_url = 4;
+  Sexo   sexo       = 5;
 
   oneof details {
-    UpdateIndividual individual = 5;
-    UpdateCompany    company    = 6;
+    UpdateIndividual individual = 6;
+    UpdateCompany    company    = 7;
   }
 }
 
@@ -114,32 +136,34 @@ message GetPersonRequest    { string id = 1; }
 message DeletePersonRequest { string id = 1; }
 
 message ListPersonsRequest {
-  uint32 page      = 1;
-  uint32 per_page  = 2;
-  string search    = 3; // nombre, cuit, dni
+  uint32 page        = 1;
+  uint32 per_page    = 2;
+  string search      = 3;           // nombre, cuit, dni…
+  PersonType type_filter = 4;       // opcional
+  bool with_contacts = 5;           // false = lista liviana
 }
 message ListPersonsResponse {
-  repeated PersonResponse data  = 1;
-  uint32 total                  = 2;
+  repeated PersonResponse data = 1;
+  uint32 total                 = 2;
 }
 
-// Contactos
+/* ───────────── Contactos (payloads y requests) ───────────── */
 message AddContactRequest {
-  string person_id           = 1;                         // required
-  AddContactPayload payload  = 2;                         // required
+  string person_id           = 1;  // required
+  AddContactPayload payload  = 2;  // required
 }
 
 message AddContactPayload {
-  ContactType tipo  = 1;                                  // required
-  string dato       = 2;                                  // required
-  bool is_primary   = 3;
+  ContactType tipo = 1;            // required
+  string dato      = 2;            // required
+  bool is_primary  = 3;
 }
 
 message UpdateContactRequest {
-  string id                     = 1;                      // required
-  ContactType tipo              = 2;
-  string dato                   = 3;
-  bool is_primary               = 4;
+  string id        = 1;            // required
+  ContactType tipo = 2;
+  string dato      = 3;
+  bool is_primary  = 4;
 }
 
 message DeleteContactRequest { string id = 1; }
@@ -149,8 +173,8 @@ message ListContactsResponse { repeated Contact data = 1; }
 
 /* --------- sub-payloads para individuo / empresa ---------- */
 message CreateIndividual {
-  string first_name = 1;                                  // required
-  string last_name  = 2;                                  // required
+  string first_name = 1;           // required
+  string last_name  = 2;           // required
   string dni        = 3;
 }
 message UpdateIndividual {
@@ -160,7 +184,7 @@ message UpdateIndividual {
 }
 
 message CreateCompany {
-  string legal_name   = 1;                                // required
+  string legal_name   = 1;         // required
   string cuit         = 2;
   string society_type = 3;
 }

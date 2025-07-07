@@ -1,138 +1,267 @@
 package services
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/rem-gestion/api-suite/person/src/dto"
-	model "github.com/rem-gestion/api-suite/person/src/models"
+	"github.com/rem-gestion/api-suite/person/src/models"
 	"github.com/rem-gestion/api-suite/person/src/repository"
+	rerrors "github.com/rem-gestion/rem-common/errors"
+	addresspb "github.com/rem-gestion/rem-common/protos/address/v1"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
+/* ───────────────────── struct & ctor ─────────────────────── */
+
 type PersonService struct {
-	repo *repository.PersonRepo
-	lg   *zap.Logger
+	repo    *repository.PersonRepo
+	addrCli addresspb.AddressServiceClient
+	lg      *zap.Logger
+	timeout time.Duration
 }
 
-func New(r *repository.PersonRepo, lg *zap.Logger) *PersonService {
-	return &PersonService{repo: r, lg: lg.Named("service")}
-}
-
-/* ---------- helpers ---------- */
-
-func copyUpdate(p *model.Person, in dto.UpdatePersonDTO) {
-	if in.AvatarURL != nil {
-		p.AvatarURL = in.AvatarURL
-	}
-	if in.Sexo != nil {
-		sexo := model.Sexo(*in.Sexo)
-		p.Sexo = &sexo
-	}
-
-	// Update sub-entity based on type
-	if p.Type == model.PersonIndividual && p.Individual != nil {
-		if in.FirstName != nil {
-			p.Individual.FirstName = *in.FirstName
-		}
-		if in.LastName != nil {
-			p.Individual.LastName = *in.LastName
-		}
-		if in.DNI != nil {
-			p.Individual.DNI = *in.DNI
-		}
-	} else if p.Type == model.PersonCompany && p.Company != nil {
-		if in.LegalName != nil {
-			p.Company.LegalName = *in.LegalName
-		}
-		if in.CUIT != nil {
-			p.Company.CUIT = *in.CUIT
-		}
-		if in.SocietyType != nil {
-			p.Company.SocietyType = *in.SocietyType
-		}
+func New(repo *repository.PersonRepo, addrConn *grpc.ClientConn, lg *zap.Logger) *PersonService {
+	return &PersonService{
+		repo:    repo,
+		addrCli: addresspb.NewAddressServiceClient(addrConn),
+		lg:      lg.Named("service"),
+		timeout: 3 * time.Second,
 	}
 }
 
-/* ---------- CRUD ---------- */
+/* ─────────────────────── helpers ─────────────────────────── */
 
-func (s *PersonService) Create(in dto.CreatePersonDTO) (*model.Person, error) {
-	s.lg.Debug("create request", zap.Any("payload", in))
+func (s *PersonService) validateCreate(in dto.CreatePersonDTO) error {
+	if in.AddressID != nil && in.Address != nil {
+		return &rerrors.BadRequestError{Msg: "address_id y address_payload son mutuamente excluyentes"}
+	}
+	switch in.Type {
+	case "individual":
+		if in.FirstName == nil || in.LastName == nil {
+			return &rerrors.ValidationError{Msg: "falta first_name o last_name"}
+		}
+	case "company":
+		if in.LegalName == nil {
+			return &rerrors.ValidationError{Msg: "falta legal_name"}
+		}
+	default:
+		return &rerrors.BadRequestError{Msg: "type debe ser individual o company"}
+	}
+	return nil
+}
 
-	p := model.Person{
+func (s *PersonService) createRemoteAddress(ctx context.Context, a *dto.AddressPayloadDTO) (*uuid.UUID, error) {
+	req := &addresspb.CreateAddressRequest{
+		Address: &addresspb.Address{
+			Street:  a.Street,
+			Number:  int32(a.Number),
+			City:    a.City,
+			State:   a.State,
+			Zip:     a.Zip,
+			Country: a.Country,
+			Floor:   valueOrEmpty(a.Floor),
+			Unit:    valueOrEmpty(a.Unit),
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	res, err := s.addrCli.Create(ctx, req) //  ←  método Create
+	if err != nil {
+		st, _ := status.FromError(err)
+		return nil, &rerrors.InternalServerError{Msg: "address-svc: " + st.Message()}
+	}
+	id := uuid.MustParse(res.Address.Id)
+	return &id, nil
+}
+
+func valueOrEmpty(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+/* ───────────────────── Personas CRUD ─────────────────────── */
+
+func (s *PersonService) Create(in dto.CreatePersonDTO) (*models.Person, error) {
+	if err := s.validateCreate(in); err != nil {
+		return nil, err
+	}
+
+	// --- Address ------------------------------------------------
+	var addrID *uuid.UUID
+	if in.AddressID != nil {
+		addrID = in.AddressID
+	} else if in.Address != nil {
+		id, err := s.createRemoteAddress(context.Background(), in.Address)
+		if err != nil {
+			return nil, err
+		}
+		addrID = id
+	}
+
+	// --- map DTO -> model --------------------------------------
+	p := &models.Person{
 		ID:        uuid.New(),
-		Type:      model.PersonType(in.Type),
-		AddressID: in.AddressID,
+		Type:      models.PersonType(in.Type),
+		AddressID: addrID,
 		AvatarURL: in.AvatarURL,
 		CreatedAt: time.Now(),
 	}
-
 	if in.Sexo != nil {
-		sexo := model.Sexo(*in.Sexo)
+		sexo := models.Sexo(*in.Sexo)
 		p.Sexo = &sexo
 	}
 
-	// Create sub-entity based on type
-	if in.Type == "individual" {
-		p.Individual = &model.Individual{
+	switch in.Type {
+	case "individual":
+		p.Individual = &models.Individual{
+			PersonID:  p.ID,
 			FirstName: *in.FirstName,
 			LastName:  *in.LastName,
-			DNI:       *in.DNI,
+			DNI:       valueOrEmpty(in.DNI),
 			CreatedAt: time.Now(),
 		}
-	} else if in.Type == "company" {
-		p.Company = &model.Company{
+	case "company":
+		p.Company = &models.Company{
+			PersonID:    p.ID,
 			LegalName:   *in.LegalName,
-			CUIT:        *in.CUIT,
-			SocietyType: *in.SocietyType,
+			CUIT:        valueOrEmpty(in.CUIT),
+			SocietyType: valueOrEmpty(in.SocietyType),
 			CreatedAt:   time.Now(),
 		}
 	}
 
-	out, err := s.repo.Create(&p)
+	// --- persist persona ---------------------------------------
+	out, err := s.repo.Create(p)
 	if err != nil {
-		s.lg.Error("create failed", zap.Error(err))
 		return nil, err
 	}
 
-	s.lg.Info("create ok", zap.String("id", out.ID.String()))
+	// --- contactos iniciales -----------------------------------
+	for _, c := range in.Contacts {
+		c.PersonaID = out.ID
+		_, err := s.AddContact(c)
+		if err != nil {
+			s.lg.Warn("contact init failed", zap.Error(err))
+		}
+	}
+
 	return out, nil
 }
 
-func (s *PersonService) Get(id string) (*model.Person, error) {
-	p, err := s.repo.Get(id)
-	if err != nil {
-		s.lg.Warn("get failed", zap.String("id", id), zap.Error(err))
-		return nil, err
-	}
-	return p, nil
+func (s *PersonService) Get(id string) (*models.Person, error) {
+	return s.repo.Get(id)
 }
 
-func (s *PersonService) Update(id string, in dto.UpdatePersonDTO) (*model.Person, error) {
-	s.lg.Debug("update request", zap.String("id", id), zap.Any("payload", in))
+func (s *PersonService) List(page, per int, search string, filter *models.PersonType) ([]models.Person, int64, error) {
+	if per <= 0 {
+		per = 20
+	}
+	offset := (page - 1) * per
+	return s.repo.List(search, filter, per, offset)
+}
 
+func (s *PersonService) Update(id string, in dto.UpdatePersonDTO) (*models.Person, error) {
 	p, err := s.repo.Get(id)
 	if err != nil {
 		return nil, err
 	}
 
-	copyUpdate(p, in)
+	// address logic
+	if in.AddressID != nil {
+		p.AddressID = in.AddressID
+	} else if in.Address != nil {
+		id, err := s.createRemoteAddress(context.Background(), in.Address)
+		if err != nil {
+			return nil, err
+		}
+		p.AddressID = id
+	}
+
+	if in.AvatarURL != nil {
+		p.AvatarURL = in.AvatarURL
+	}
+	if in.Sexo != nil {
+		sexo := models.Sexo(*in.Sexo)
+		p.Sexo = &sexo
+	}
+
+	// subtype updates
+	if p.Type == models.PersonIndividual && p.Individual != nil {
+		setIf := func(src *string, dst *string) {
+			if src != nil {
+				*dst = *src
+			}
+		}
+		setIf(in.FirstName, &p.Individual.FirstName)
+		setIf(in.LastName, &p.Individual.LastName)
+		setIf(in.DNI, &p.Individual.DNI)
+	} else if p.Type == models.PersonCompany && p.Company != nil {
+		setIf := func(src *string, dst *string) {
+			if src != nil {
+				*dst = *src
+			}
+		}
+		setIf(in.LegalName, &p.Company.LegalName)
+		setIf(in.CUIT, &p.Company.CUIT)
+		setIf(in.SocietyType, &p.Company.SocietyType)
+	}
+
 	now := time.Now()
 	p.UpdatedAt = &now
 
 	if err := s.repo.Update(p); err != nil {
-		s.lg.Error("update failed", zap.String("id", id), zap.Error(err))
 		return nil, err
 	}
-
-	s.lg.Info("update ok", zap.String("id", id))
 	return p, nil
 }
 
 func (s *PersonService) Delete(id string) error {
-	if err := s.repo.Delete(id); err != nil {
-		return err
+	return s.repo.Delete(id)
+}
+
+/* ───────────────────── Contactos CRUD ─────────────────────── */
+
+func (s *PersonService) AddContact(in dto.CreateContactoDTO) (*models.Contacto, error) {
+	if in.Tipo != "email" && in.Tipo != "phone" && in.Tipo != "whatsapp" {
+		return nil, &rerrors.ValidationError{Msg: "tipo inválido"}
 	}
-	s.lg.Info("delete ok", zap.String("id", id))
-	return nil
+	c := &models.Contacto{
+		ID:        uuid.New(),
+		PersonaID: in.PersonaID,
+		Tipo:      in.Tipo,
+		Dato:      in.Dato,
+		IsPrimary: in.IsPrimary,
+		CreatedAt: time.Now(),
+	}
+	return s.repo.AddContact(c)
+}
+
+func (s *PersonService) UpdateContact(id string, in dto.UpdateContactoDTO) (*models.Contacto, error) {
+	changes := map[string]any{}
+	if in.Dato != nil {
+		changes["dato"] = *in.Dato
+	}
+	if in.IsPrimary != nil {
+		changes["is_primary"] = *in.IsPrimary
+	}
+	if len(changes) == 0 {
+		return nil, &rerrors.BadRequestError{Msg: "no hay campos para actualizar"}
+	}
+	return s.repo.UpdateContact(id, changes)
+}
+
+func (s *PersonService) DeleteContact(id string) error {
+	return s.repo.DeleteContact(id)
+}
+
+func (s *PersonService) ListContacts(personID string) ([]models.Contacto, error) {
+	return s.repo.ListContacts(personID)
 }
