@@ -169,3 +169,58 @@ func uuidFromParam(id string, ctx *gin.Context) uuid.UUID {
 	}
 	return u
 }
+
+/* ────────────────── NUEVOS ENDPOINTS ──────────────────── */
+
+// GET /persons/:id/full - Persona con dirección completa expandida
+func (c *Ctrl) GetFull(ctx *gin.Context) {
+	fullPerson, err := c.svc.GetFullPerson(ctx.Param("id"))
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, fullPerson)
+}
+
+// GET /contacts/primary/:personId - Obtener solo contacto primario
+func (c *Ctrl) GetPrimaryContact(ctx *gin.Context) {
+	contact, err := c.svc.GetPrimaryContact(ctx.Param("personId"))
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, contact)
+}
+
+// POST /persons/bulk - Creación masiva de personas
+func (c *Ctrl) BulkCreate(ctx *gin.Context) {
+	var requests []dto.CreatePersonDTO
+	if err := ctx.ShouldBindJSON(&requests); err != nil {
+		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
+		return
+	}
+
+	if len(requests) == 0 {
+		ctx.Error(&rerrors.BadRequestError{Msg: "la lista no puede estar vacía"})
+		return
+	}
+
+	if len(requests) > 100 { // Límite de seguridad
+		ctx.Error(&rerrors.BadRequestError{Msg: "máximo 100 personas por lote"})
+		return
+	}
+
+	result, err := c.svc.BulkCreate(requests)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	// Devolver 207 (Multi-Status) si hay errores parciales
+	statusCode := http.StatusCreated
+	if len(result.Errors) > 0 {
+		statusCode = http.StatusMultiStatus
+	}
+
+	ctx.JSON(statusCode, result)
+}

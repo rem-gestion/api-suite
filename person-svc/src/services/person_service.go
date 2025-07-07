@@ -265,3 +265,99 @@ func (s *PersonService) DeleteContact(id string) error {
 func (s *PersonService) ListContacts(personID string) ([]models.Contacto, error) {
 	return s.repo.ListContacts(personID)
 }
+
+/* ─────────────────────── NUEVOS ENDPOINTS ─────────────────────── */
+
+// GetFullPerson obtiene una persona con dirección completa expandida y contactos
+func (s *PersonService) GetFullPerson(id string) (*dto.FullPersonResponse, error) {
+	// Obtener la persona con sus relaciones
+	person, err := s.repo.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &dto.FullPersonResponse{
+		Person: person,
+	}
+
+	// Si tiene address_id, obtener la dirección completa del address-svc
+	if person.AddressID != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+		defer cancel()
+
+		req := &addresspb.GetAddressRequest{
+			Id: person.AddressID.String(),
+		}
+
+		res, err := s.addrCli.Get(ctx, req)
+		if err != nil {
+			// Log error pero no fallar completamente
+			s.lg.Warn("failed to fetch address",
+				zap.String("address_id", person.AddressID.String()),
+				zap.Error(err))
+		} else {
+			response.Address = &dto.AddressResponse{
+				ID:      res.Address.Id,
+				Floor:   res.Address.Floor,
+				Unit:    res.Address.Unit,
+				Street:  res.Address.Street,
+				Number:  res.Address.Number,
+				City:    res.Address.City,
+				State:   res.Address.State,
+				Zip:     res.Address.Zip,
+				Country: res.Address.Country,
+			}
+		}
+	}
+
+	return response, nil
+}
+
+// GetPrimaryContact obtiene solo el contacto primario de una persona
+func (s *PersonService) GetPrimaryContact(personID string) (*models.Contacto, error) {
+	contacts, err := s.repo.ListContacts(personID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Buscar el contacto primario
+	for _, contact := range contacts {
+		if contact.IsPrimary {
+			return &contact, nil
+		}
+	}
+
+	// Si no hay contacto primario, devolver error específico
+	return nil, &rerrors.NotFoundError{Msg: "no se encontró contacto primario para esta persona"}
+}
+
+// BulkCreate crea múltiples personas en lote
+func (s *PersonService) BulkCreate(requests []dto.CreatePersonDTO) (*dto.BulkCreateResponse, error) {
+	response := &dto.BulkCreateResponse{
+		Success: make([]dto.BulkPersonResult, 0),
+		Errors:  make([]dto.BulkErrorResult, 0),
+		Total:   len(requests),
+	}
+
+	for i, req := range requests {
+		person, err := s.Create(req)
+		if err != nil {
+			response.Errors = append(response.Errors, dto.BulkErrorResult{
+				Index: i,
+				Error: err.Error(),
+			})
+		} else {
+			response.Success = append(response.Success, dto.BulkPersonResult{
+				Index:  i,
+				Person: person,
+			})
+		}
+	}
+
+	s.lg.Info("bulk create completed",
+		zap.Int("total", response.Total),
+		zap.Int("success", len(response.Success)),
+		zap.Int("errors", len(response.Errors)))
+
+	return response, nil
+}

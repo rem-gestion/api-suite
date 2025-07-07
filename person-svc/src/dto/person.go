@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/rem-gestion/api-suite/person/src/models"
+)
 
 /* ─────────────────────────  ADDRESS  ───────────────────────── */
 
@@ -67,4 +70,41 @@ type CreateContactoDTO struct {
 type UpdateContactoDTO struct {
 	Dato      *string `json:"dato,omitempty"`
 	IsPrimary *bool   `json:"is_primary,omitempty"`
+}
+
+/* ─────────────────────  RESPONSE DTOS  ────────────────────── */
+
+// FullPersonResponse representa una persona con dirección completa expandida
+type FullPersonResponse struct {
+	*models.Person
+	Address *AddressResponse `json:"address,omitempty"`
+}
+
+type AddressResponse struct {
+	ID      string `json:"id"`
+	Floor   string `json:"floor,omitempty"`
+	Unit    string `json:"unit,omitempty"`
+	Street  string `json:"street"`
+	Number  int32  `json:"number"`
+	City    string `json:"city"`
+	State   string `json:"state,omitempty"`
+	Zip     string `json:"zip,omitempty"`
+	Country string `json:"country"`
+}
+
+// BulkCreateResponse representa el resultado de una creación masiva
+type BulkCreateResponse struct {
+	Success []BulkPersonResult `json:"success"`
+	Errors  []BulkErrorResult  `json:"errors"`
+	Total   int                `json:"total"`
+}
+
+type BulkPersonResult struct {
+	Index  int            `json:"index"`
+	Person *models.Person `json:"person"`
+}
+
+type BulkErrorResult struct {
+	Index int    `json:"index"`
+	Error string `json:"error"`
 }
