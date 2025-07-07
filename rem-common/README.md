@@ -482,7 +482,7 @@ grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check
 **Repositorio:** [rem-backend/services/rem-common](.)  
 **Protobuf definitions:** [./protos/](./protos/)  
 **Versión:** v2.0.0 (con soporte gRPC)  
-**Última actualización:** Diciembre 2024
+
 
 ---
 

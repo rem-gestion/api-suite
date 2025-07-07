@@ -1,6 +1,6 @@
 # 👥 Person Service (person-svc)
 
-Microservicio centralizado para la gestión de personas (individuos y empresas) en **REM Gestión**. Maneja el registro, consulta y administración de entidades personales junto con sus datos de contacto, integrándose con el servicio de direcciones para proporcionar información completa.
+Microservicio centralizado para la gestión de personas (fisicas y juridicas) en **REM Gestión**. Maneja el registro, consulta y administración de entidades personales junto con sus datos de contacto, integrándose con el servicio de direcciones para proporcionar información completa.
 
 ---
 
@@ -8,7 +8,7 @@ Microservicio centralizado para la gestión de personas (individuos y empresas) 
 
 Este servicio fue diseñado como un microservicio independiente para:
 
-- **Centralizar la gestión de personas** (individuos y empresas) evitando duplicación
+- **Centralizar la gestión de personas** (fisicas y juridicas) evitando duplicación
 - **Manejo unificado de contactos** (email, teléfono, WhatsApp) con soporte para contactos primarios
 - **Integración con address-svc** vía gRPC para datos de ubicación completos
 - **Soporte para operaciones masivas** (bulk operations) con manejo de errores parciales
@@ -383,8 +383,8 @@ X-Api-Key: PersonSvcSecretKey
 ## 🛡️ Validaciones y reglas de negocio
 
 ### Tipos de persona:
-- **`individual`**: Persona física (requiere `first_name`, `last_name`)
-- **`company`**: Persona jurídica (requiere `legal_name`)
+- **`individual`**: Persona física (requiere `first_name`, `last_name`, `dni`)
+- **`company`**: Persona jurídica (requiere `legal_name`, `cuit`)
 
 ### Campos requeridos por tipo:
 
@@ -398,10 +398,10 @@ X-Api-Key: PersonSvcSecretKey
 - `legal_name` (máx. 120 caracteres)
 
 ### Campos opcionales:
-- `dni` (8 caracteres, único) - Solo para individuales
-- `cuit` (11 caracteres, único) - Solo para empresas
-- `society_type` (máx. 12 caracteres) - Solo para empresas
-- `sexo` (`masculino` | `femenino`) - Solo para individuales
+- `dni` (8 caracteres, único) - Solo para personas fisicas
+- `cuit` (11 caracteres, único) - Solo para personas juridicas
+- `society_type` (máx. 12 caracteres) - Solo para personas juridicas
+- `sexo` (`masculino` | `femenino`) - Solo para personas fisicas
 - `avatar_url` - URL de imagen de perfil
 - `address_id` - UUID de dirección existente
 - `address_payload` - Datos para crear nueva dirección
@@ -711,88 +711,6 @@ curl -X POST \
 
 ---
 
-## 🤝 Integración con otros servicios
-
-### Con address-svc (gRPC):
-```go
-// person-svc como cliente gRPC
-func (s *PersonService) GetFullPerson(personID string) (*dto.FullPersonResponse, error) {
-    // 1. Obtener persona de BD local
-    person, err := s.repo.GetByID(personID)
-    if err != nil {
-        return nil, err
-    }
-    
-    // 2. Si tiene address_id, consultar address-svc vía gRPC
-    if person.AddressID != nil {
-        addressResp, err := s.addressClient.GetAddress(*person.AddressID)
-        if err != nil {
-            // Log error pero no fallar - devolver persona sin dirección
-            s.logger.Warn("failed to get address", zap.Error(err))
-        }
-    }
-    
-    return &dto.FullPersonResponse{
-        Person: person,
-        Address: addressResponse,
-    }, nil
-}
-```
-
-### Desde property-service:
-```go
-type Property struct {
-    ID       string `json:"id"`
-    OwnerID  string `json:"owner_id"`  // FK a person-svc (individual/company)
-    TenantID string `json:"tenant_id"` // FK a person-svc (individual)
-    // ...otros campos
-}
-
-// Al crear propiedad, primero validar que la persona existe
-personResp, err := personServiceClient.GetPerson(ownerID)
-if err != nil {
-    return fmt.Errorf("owner not found: %w", err)
-}
-```
-
-### Desde contract-service:
-```go
-type Contract struct {
-    ID         string `json:"id"`
-    LandlordID string `json:"landlord_id"` // FK a person-svc
-    TenantID   string `json:"tenant_id"`   // FK a person-svc
-    
-    // Obtener contactos para notificaciones
-    LandlordContacts []Contact `json:"landlord_contacts"`
-    TenantContacts   []Contact `json:"tenant_contacts"`
-}
-
-// Obtener contactos primarios para envío de contratos
-landlordPrimary, err := personServiceClient.GetPrimaryContact(contract.LandlordID)
-tenantPrimary, err := personServiceClient.GetPrimaryContact(contract.TenantID)
-```
-
-### Desde notification-service:
-```go
-// Enviar notificación usando contacto primario
-func SendNotification(personID string, message string) error {
-    contact, err := personServiceClient.GetPrimaryContact(personID)
-    if err != nil {
-        return err
-    }
-    
-    switch contact.Tipo {
-    case "email":
-        return emailService.Send(contact.Dato, message)
-    case "whatsapp":
-        return whatsappService.Send(contact.Dato, message) 
-    case "phone":
-        return smsService.Send(contact.Dato, message)
-    }
-}
-```
-
----
 
 ## 📡 Comunicación gRPC
 
@@ -977,5 +895,5 @@ WHERE datname = 'remgestion';
 **Proto definitions:** [rem-common/protos/person/](../rem-common/protos/person/)
 
 **Versión:** v1.0.0  
-**Última actualización:** Diciembre 2024
+
 
