@@ -112,7 +112,8 @@ func (c *Ctrl) AddContact(ctx *gin.Context) {
 		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
 		return
 	}
-	in.PersonaID = uuidFromParam(ctx.Param("id"), ctx)
+	id := uuidFromParam(ctx.Param("id"), ctx)
+	in.PersonaID = &id
 	if ctx.IsAborted() {
 		return
 	}

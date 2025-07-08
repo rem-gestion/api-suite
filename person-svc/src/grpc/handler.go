@@ -9,6 +9,8 @@ import (
 	model "github.com/rem-gestion/api-suite/person/src/models"
 	"github.com/rem-gestion/api-suite/person/src/services"
 	personpb "github.com/rem-gestion/rem-common/protos/person/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -275,8 +277,12 @@ func (h *Handler) DeletePerson(ctx context.Context, r *personpb.DeletePersonRequ
 /* ───────────────────── Contactos CRUD ─────────────────────── */
 
 func (h *Handler) AddContact(ctx context.Context, r *personpb.AddContactRequest) (*personpb.ContactResponse, error) {
+	id, err := uuid.Parse(r.PersonId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "person_id inválido")
+	}
 	in := dto.CreateContactoDTO{
-		PersonaID: uuid.MustParse(r.PersonId),
+		PersonaID: &id,
 		Tipo:      r.Payload.Tipo.String(),
 		Dato:      r.Payload.Dato,
 		IsPrimary: r.Payload.IsPrimary,

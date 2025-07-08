@@ -22,8 +22,8 @@ func Dial(addr string) (*grpc.ClientConn, error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // TODO: TLS en prod
 		grpc.WithBlock(), // bloqueo hasta que conecte o ctx venza
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                30 * time.Second,
-			Timeout:             5 * time.Second,
+			Time:                5 * time.Minute,
+			Timeout:             15 * time.Second,
 			PermitWithoutStream: true,
 		}),
 	)

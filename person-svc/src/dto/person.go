@@ -61,10 +61,10 @@ type UpdatePersonDTO struct {
 /* ──────────────────────  CONTACTO  ────────────────────────── */
 
 type CreateContactoDTO struct {
-	PersonaID uuid.UUID `json:"persona_id" validate:"required"`
-	Tipo      string    `json:"tipo"       validate:"required,oneof=email phone whatsapp"`
-	Dato      string    `json:"dato"       validate:"required"`
-	IsPrimary bool      `json:"is_primary"`
+	PersonaID *uuid.UUID `json:"persona_id,omitempty"`
+	Tipo      string     `json:"tipo"       validate:"required,oneof=email phone whatsapp"`
+	Dato      string     `json:"dato"       validate:"required"`
+	IsPrimary bool       `json:"is_primary"`
 }
 
 type UpdateContactoDTO struct {

@@ -146,7 +146,8 @@ func (s *PersonService) Create(in dto.CreatePersonDTO) (*models.Person, error) {
 
 	// --- contactos iniciales -----------------------------------
 	for _, c := range in.Contacts {
-		c.PersonaID = out.ID
+		id := out.ID
+		c.PersonaID = &id
 		_, err := s.AddContact(c)
 		if err != nil {
 			s.lg.Warn("contact init failed", zap.Error(err))
@@ -235,7 +236,7 @@ func (s *PersonService) AddContact(in dto.CreateContactoDTO) (*models.Contacto, 
 	}
 	c := &models.Contacto{
 		ID:        uuid.New(),
-		PersonaID: in.PersonaID,
+		PersonaID: *in.PersonaID,
 		Tipo:      in.Tipo,
 		Dato:      in.Dato,
 		IsPrimary: in.IsPrimary,

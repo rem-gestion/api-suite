@@ -71,7 +71,7 @@ func main() {
 	router.Setup(r, ctrl) // /persons, /contacts…
 	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
-	httpSrv := &http.Server{Addr: ":4000", Handler: r}
+	httpSrv := &http.Server{Addr: ":4001", Handler: r}
 
 	/* ---------- gRPC ---------- */
 	kp := keepalive.ServerParameters{Time: 2 * time.Hour, Timeout: 20 * time.Second}

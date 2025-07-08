@@ -66,8 +66,8 @@ type GRPCConfig struct {
 }
 
 type AddressServiceConfig struct {
-	Host string `envconfig:"ADDRESS_HOST" default:"address-svc"`
-	Port int    `envconfig:"ADDRESS_PORT" default:"50052"`
+	Host string `envconfig:"REM_ADDRESS_HOST" default:"127.0.0.1"`
+	Port int    `envconfig:"REM_ADDRESS_PORT" default:"50051"`
 }
 
 type Config struct {
