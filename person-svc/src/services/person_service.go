@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -139,6 +140,7 @@ func (s *PersonService) Create(in dto.CreatePersonDTO) (*models.Person, error) {
 	}
 
 	// --- persist persona ---------------------------------------
+	fmt.Printf("Creating person: %+v\n", p.Company)
 	out, err := s.repo.Create(p)
 	if err != nil {
 		return nil, err

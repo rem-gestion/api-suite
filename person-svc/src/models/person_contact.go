@@ -60,7 +60,7 @@ func (Individual) TableName() string { return "individual" }
 type Company struct {
 	PersonID    uuid.UUID `gorm:"type:uuid;primaryKey"`
 	LegalName   string    `gorm:"size:120;not null"`
-	CUIT        string    `gorm:"size:11;unique"`
+	CUIT        string    `gorm:"column:cuit;size:11;unique"`
 	SocietyType string    `gorm:"size:12"`
 
 	CreatedAt time.Time
