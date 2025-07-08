@@ -29,6 +29,21 @@ services:
     volumes:
       - pgdata_person:/var/lib/postgresql/data
 
+  # ───────────────────── auth-identity DB ───────────────
+  postgres_auth:
+    image: postgres:16-alpine
+    container_name: postgres_auth
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     lucho
+      POSTGRES_PASSWORD: supersecreta
+      POSTGRES_DB:       remgestion_auth
+    ports:
+      - "5434:5432"          # 5434 en host  →  5432 dentro del contenedor
+    volumes:
+      - pgdata_auth:/var/lib/postgresql/data
+
 volumes:
   pgdata_address:
   pgdata_person:
+  pgdata_auth:

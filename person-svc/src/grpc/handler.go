@@ -77,8 +77,16 @@ func uuidPtr(id *uuid.UUID) string {
 // ------------ proto → DTO ------------
 func toCreateDTO(r *personpb.CreatePersonRequest) dto.CreatePersonDTO {
 	out := dto.CreatePersonDTO{
-		Type:      r.Type.String(),
 		AvatarURL: strPtr(r.AvatarUrl),
+	}
+
+	switch r.Type {
+	case personpb.PersonType_INDIVIDUAL:
+		out.Type = "individual"
+	case personpb.PersonType_COMPANY:
+		out.Type = "company"
+	default:
+		out.Type = ""
 	}
 	if r.Sexo != personpb.Sexo_SEXO_UNSPECIFIED {
 		s := r.Sexo.String()

@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package rem.auth_identity.v1;
+
+option go_package = "github.com/rem-gestion/rem-common/protos/auth-identity/v1;authpb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+/* ─────────────────────────  ENUMS  ────────────────────────── */
+enum AccountProvider {
+  ACCOUNT_PROVIDER_UNSPECIFIED = 0;
+  EMAIL                        = 1;
+  GOOGLE                       = 2;
+}
+
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  PENDING                    = 1;
+  ACTIVE                     = 2;
+  SUSPENDED                  = 3;
+}
+
+enum OnboardStatus {
+  ONBOARD_STATUS_UNSPECIFIED = 0;
+  NEW                        = 1;
+  IN_PROGRESS                = 2;
+  DONE                       = 3;
+}
+
+/* ───────────────────────  AUTH SERVICE  ─────────────────── */
+service AuthIdentityService {
+  // Autenticación
+  rpc ValidateToken    (ValidateTokenRequest)    returns (ValidateTokenResponse);
+  rpc GetUserById      (GetUserByIdRequest)      returns (UserResponse);
+  rpc GetUserByEmail   (GetUserByEmailRequest)   returns (UserResponse);
+  rpc CreateUser       (CreateUserRequest)       returns (UserResponse);
+  rpc UpdateUser       (UpdateUserRequest)       returns (UserResponse);
+  rpc DeactivateUser   (DeactivateUserRequest)   returns (google.protobuf.Empty);
+  
+  // Gestión de cuentas
+  rpc GetAccount       (GetAccountRequest)       returns (AccountResponse);
+  rpc UpdateAccount    (UpdateAccountRequest)    returns (AccountResponse);
+}
+
+/* ─────────────────────────  ACCOUNT  ───────────────────────── */
+message AccountResponse {
+  string id                         = 1;
+  AccountProvider provider          = 2;
+  string email                      = 3;
+  AccountStatus status              = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  string updated_by                 = 7;
+}
+
+/* ─────────────────────────  USER  ───────────────────────── */
+message UserResponse {
+  string id                         = 1;
+  string account_id                 = 2;
+  string person_id                  = 3;
+  OnboardStatus onboard_status      = 4;
+  google.protobuf.Timestamp last_login   = 5;
+  google.protobuf.Timestamp created_at   = 6;
+  google.protobuf.Timestamp updated_at   = 7;
+  string updated_by                 = 8;
+  
+  // Relación con Account
+  AccountResponse account           = 9;
+}
+
+/* ───────────────────────  REQUESTS  ───────────────────────── */
+// Token validation
+message ValidateTokenRequest {
+  string token = 1;                 // JWT token to validate
+}
+
+message ValidateTokenResponse {
+  bool is_valid     = 1;
+  string user_id    = 2;
+  string email      = 3;
+  string role       = 4;
+  int64 expires_at  = 5;            // Unix timestamp
+}
+
+// User operations
+message GetUserByIdRequest {
+  string user_id = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message CreateUserRequest {
+  string account_id        = 1;     // required
+  string person_id         = 2;     // optional
+  OnboardStatus onboard_status = 3; // optional, defaults to NEW
+}
+
+message UpdateUserRequest {
+  string user_id           = 1;     // required
+  string person_id         = 2;     // optional
+  OnboardStatus onboard_status = 3; // optional
+  string updated_by        = 4;     // optional
+}
+
+message DeactivateUserRequest {
+  string user_id    = 1;            // required
+  string updated_by = 2;            // optional
+}
+
+// Account operations
+message GetAccountRequest {
+  string account_id = 1;
+}
+
+message UpdateAccountRequest {
+  string account_id    = 1;         // required
+  AccountStatus status = 2;         // optional
+  string updated_by    = 3;         // optional
+}

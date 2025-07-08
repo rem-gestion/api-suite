@@ -70,6 +70,11 @@ type AddressServiceConfig struct {
 	Port int    `envconfig:"REM_ADDRESS_PORT" default:"50051"`
 }
 
+type PersonServiceConfig struct {
+	Host string `envconfig:"REM_PERSON_HOST" default:"127.0.0.1"`
+	Port int    `envconfig:"REM_PERSON_PORT" default:"50052"`
+}
+
 type Config struct {
 	DriverRelacional string `envconfig:"DB_DRIVER"`
 	Postgres         PostgresConfig
@@ -80,6 +85,7 @@ type Config struct {
 
 	GRPC    GRPCConfig
 	Address AddressServiceConfig
+	Person  PersonServiceConfig
 
 	Logger LoggerConfig
 	Server ServerConfig
