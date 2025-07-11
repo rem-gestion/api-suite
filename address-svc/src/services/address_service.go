@@ -9,11 +9,11 @@ import (
 )
 
 type AddressService struct {
-	repo *repository.AddressRepo
+	repo repository.AddressRepository
 	lg   *zap.Logger
 }
 
-func New(r *repository.AddressRepo, lg *zap.Logger) *AddressService {
+func New(r repository.AddressRepository, lg *zap.Logger) *AddressService {
 	return &AddressService{repo: r, lg: lg.Named("service")}
 }
 
@@ -106,5 +106,40 @@ func (s *AddressService) Delete(id string) error {
 		return err
 	}
 	s.lg.Info("delete ok", zap.String("id", id))
+	return nil
+}
+
+// GetRepositoryStats obtiene estadísticas del repositorio adaptativo
+func (s *AddressService) GetRepositoryStats() map[string]interface{} {
+	if adaptiveRepo, ok := s.repo.(*repository.AdaptiveAddressRepo); ok {
+		return adaptiveRepo.GetStats()
+	}
+	return map[string]interface{}{
+		"type": "standard_repository",
+	}
+}
+
+// IsUsingMemoryFallback indica si el repositorio está usando memoria como fallback
+func (s *AddressService) IsUsingMemoryFallback() bool {
+	if adaptiveRepo, ok := s.repo.(*repository.AdaptiveAddressRepo); ok {
+		return !adaptiveRepo.IsConnected()
+	}
+	return false
+}
+
+// ForceDatabaseReconnection fuerza un intento de reconexión a la base de datos
+func (s *AddressService) ForceDatabaseReconnection() {
+	if adaptiveRepo, ok := s.repo.(*repository.AdaptiveAddressRepo); ok {
+		s.lg.Info("forcing database reconnection via service")
+		adaptiveRepo.ForceRetry()
+	}
+}
+
+// ForceMemorySync fuerza la sincronización de memoria a DB
+func (s *AddressService) ForceMemorySync() error {
+	if adaptiveRepo, ok := s.repo.(*repository.AdaptiveAddressRepo); ok {
+		s.lg.Info("forcing memory sync via service")
+		return adaptiveRepo.ForceSyncMemoryToDB()
+	}
 	return nil
 }

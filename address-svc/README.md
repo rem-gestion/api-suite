@@ -1,6 +1,6 @@
 # 🏠 Address Service (address-svc)
 
-Microservicio centralizado para la gestión de direcciones en **REM Gestión**. Proporciona un punto único para crear, consultar y gestionar direcciones que son utilizadas por múltiples entidades del sistema (propiedades, usuarios, oficinas, etc.).
+Microservicio centralizado para la gestión de direcciones en **REM Gestión** con **resiliencia y fallback automático a memoria**. Proporciona un punto único para crear, consultar y gestionar direcciones que son utilizadas por múltiples entidades del sistema (propiedades, usuarios, oficinas, etc.).
 
 ---
 
@@ -13,6 +13,23 @@ Este servicio fue extraído como un microservicio independiente para:
 - **Reutilización entre servicios** (properties, users, organizations, etc.)
 - **Mantener consistencia** en el formato y validación de direcciones
 - **Escalabilidad independiente** según la demanda de geolocalización
+- **🆕 Resiliencia automática**: Funciona con memoria cuando la DB está indisponible
+
+---
+
+## 🛡️ Resiliencia y Fallback Automático
+
+### Características de Resiliencia:
+- **Fallback automático a memoria** cuando la base de datos no está disponible
+- **Reconexión automática** cada 15 segundos sin spam de logs
+- **Migración automática** de datos de memoria a DB al reconectar
+- **Operación continua** independientemente del estado de la base de datos
+- **Logging inteligente** que evita llenar los logs con mensajes de retry
+
+### Modos de Operación:
+1. **Database Mode**: Operación normal con PostgreSQL
+2. **Memory Fallback Mode**: Almacenamiento temporal en memoria con retry automático
+3. **Migration Mode**: Sincronización automática de memoria a DB al reconectar
 
 ---
 
@@ -26,11 +43,16 @@ address-svc/
 ├── src/
 │   ├── controllers/          # Capa de presentación (HTTP handlers)
 │   ├── services/             # Lógica de negocio
-│   ├── repository/           # Acceso a datos (GORM)
+│   ├── repository/           # Acceso a datos (GORM + Adaptive)
+│   │   ├── adaptive_repo.go   # 🆕 Repositorio adaptativo con resiliencia
+│   │   ├── adaptive_crud.go   # 🆕 Operaciones CRUD adaptativas
+│   │   └── interface.go       # Contrato del repositorio
 │   ├── models/              # Entidades de dominio
 │   ├── dto/                 # Data Transfer Objects
 │   └── router/              # Configuración de rutas
 ├── migrations/pg/           # Scripts de migración PostgreSQL
+├── test_resilience.md       # 🆕 Guía de pruebas de resiliencia
+├── test_client.go          # 🆕 Cliente de prueba
 ├── .env                     # Variables de entorno locales
 ├── .air.toml               # Configuración de hot-reload
 └── go.mod                  # Dependencias del módulo
@@ -38,9 +60,19 @@ address-svc/
 
 ### Flujo de datos:
 ```
-HTTP Request → Router → Controller → Service → Repository → Database
-                ↓
-HTTP Response ← JSON ← DTO ← Business Logic ← Model ← PostgreSQL
+HTTP Request → Router → Controller → Service → Adaptive Repository
+                ↓                                     ↓
+HTTP Response ← JSON ← DTO ← Business Logic     [Database OR Memory]
+                                                      ↓
+                                              Auto-migration on reconnect
+```
+
+### 🆕 Flujo de Resiliencia:
+```
+1. Startup → Try DB Connection
+2. Success → Database Mode
+3. Failure → Memory Fallback Mode + Silent Retry (15s interval)
+4. Reconnect → Auto-migrate Memory → Database Mode
 ```
 
 ---
@@ -200,6 +232,80 @@ X-Api-Key: AddressSvcSecretKey
 
 ---
 
+## 🛡️ Endpoints de Resiliencia y Monitoreo
+
+### **GET /health** - Health check básico
+```http
+GET /health
+```
+**Respuesta (200):** `ok`
+
+### **GET /health/detailed** - Estado detallado del servicio
+```http
+GET /health/detailed
+```
+**Respuesta (200):**
+```json
+{
+  "status": "ok",
+  "using_memory_fallback": false,
+  "repository": {
+    "mode": "database",
+    "db_connected": true,
+    "memory_store_size": 0,
+    "memory_operations": 0,
+    "db_operations": 15,
+    "retry_count": 1,
+    "last_connected": "2025-01-15T10:30:00Z",
+    "events_buffered": 0
+  }
+}
+```
+
+**Modos disponibles:**
+- `"database"`: Operación normal con PostgreSQL
+- `"memory_fallback"`: Usando memoria por falta de DB
+- `"database_with_pending_migration"`: DB conectada con datos pendientes en memoria
+
+### **POST /admin/sync-memory** - Forzar sincronización
+Fuerza la migración manual de datos de memoria a base de datos.
+
+```http
+POST /admin/sync-memory
+X-Api-Key: AddressSvcSecretKey
+```
+
+**Respuesta exitosa (200):**
+```json
+{
+  "message": "sync triggered"
+}
+```
+
+**Respuesta de error (400):**
+```json
+{
+  "error": "database not connected - cannot sync"
+}
+```
+
+### **POST /admin/force-reconnect** - Forzar reconexión
+Fuerza un intento de reconexión inmediato a la base de datos.
+
+```http
+POST /admin/force-reconnect
+X-Api-Key: AddressSvcSecretKey
+```
+
+**Respuesta (200):**
+```json
+{
+  "message": "reconnection attempt triggered"
+}
+```
+
+---
+
 ## 🛡️ Validaciones y reglas de negocio
 
 ### Campos requeridos:
@@ -224,6 +330,35 @@ Si detecta duplicado durante CREATE, retorna la dirección existente.
 
 ### Inmutabilidad:
 Las direcciones no se pueden modificar una vez creadas. Si necesitas cambios, debes crear una nueva dirección.
+
+---
+
+## 🛡️ Resiliencia y Recuperación Automática
+
+### Comportamiento de Fallback:
+1. **Inicio sin DB**: Si la base de datos no está disponible al iniciar, el servicio automáticamente cambia a modo memoria
+2. **Operación continua**: Todas las operaciones CRUD funcionan normalmente usando memoria como almacenamiento temporal
+3. **Reconexión silenciosa**: Cada 15 segundos intenta reconectarse sin llenar los logs
+4. **Migración automática**: Al reconectarse, migra automáticamente todos los datos de memoria a la base de datos
+5. **Limpieza**: Después de una migración exitosa, limpia la memoria automáticamente
+
+### Logging Inteligente:
+- **Inicio**: Un solo warning si no puede conectar a la DB
+- **Retry silencioso**: No logea cada intento de reconexión (evita spam)
+- **Reconexión**: Logea claramente cuando se reestablece la conexión
+- **Migración**: Reporta el progreso de migración con detalles
+
+### Monitoreo:
+- Usar `GET /health/detailed` para monitorear el estado del servicio
+- Campo `mode` indica el estado actual del repositorio
+- Campo `memory_store_size` muestra direcciones pendientes de migración
+- Campo `using_memory_fallback` indica si está en modo resiliencia
+
+### Casos de Uso:
+- **Deployment**: El servicio puede iniciar antes que la base de datos
+- **Mantenimiento DB**: Continúa operando durante mantenimientos programados
+- **Fallos temporales**: Recuperación automática sin intervención manual
+- **Desarrollo**: Funciona sin configurar base de datos para testing local
 
 ---
 

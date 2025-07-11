@@ -17,7 +17,6 @@ import (
 	"github.com/rem-gestion/rem-common/logger"
 	mw "github.com/rem-gestion/rem-common/middleware"
 
-	"github.com/rem-gestion/rem-common/db"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/keepalive"
 
@@ -35,11 +34,20 @@ func main() {
 	lg := logger.New(cfg.Logger, "address-svc")
 
 	/* DB ------------------------------------------------- */
-	pg, err := db.NewPostgres(cfg.Postgres)
-	if err != nil {
-		lg.Fatal("postgres connect failed", zap.Error(err))
+	lg.Info("initializing adaptive repository with database resilience")
+
+	// Usar repositorio adaptativo mejorado que maneja conexión internamente
+	repo := repository.NewAdaptive(&cfg.Postgres, lg.Named("adaptive-repo"))
+
+	// Dar tiempo al repositorio para intentar la conexión inicial
+	time.Sleep(1 * time.Second)
+
+	if repo.IsConnected() {
+		lg.Info("database connection established - operating in database mode")
+	} else {
+		lg.Warn("database unavailable - operating in memory fallback mode with automatic retry every 15s")
 	}
-	repo := repository.New(pg, lg.Named("repo"))
+
 	svc := services.New(repo, lg)
 	ctrl := controller.New(svc)
 
@@ -55,6 +63,25 @@ func main() {
 	)
 	router.Setup(r, ctrl)
 	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	r.GET("/health/detailed", func(c *gin.Context) {
+		stats := svc.GetRepositoryStats()
+		c.JSON(http.StatusOK, gin.H{
+			"status":                "ok",
+			"repository":            stats,
+			"using_memory_fallback": svc.IsUsingMemoryFallback(),
+		})
+	})
+	r.POST("/admin/sync-memory", func(c *gin.Context) {
+		if err := svc.ForceMemorySync(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "sync triggered"})
+	})
+	r.POST("/admin/force-reconnect", func(c *gin.Context) {
+		svc.ForceDatabaseReconnection()
+		c.JSON(http.StatusOK, gin.H{"message": "reconnection attempt triggered"})
+	})
 
 	httpSrv := &http.Server{Addr: ":4000", Handler: r} // ★
 
@@ -96,7 +123,6 @@ func main() {
 	_ = httpSrv.Shutdown(ctx)
 	grpcSrv.GracefulStop()
 
-	if sqlDB, err := pg.DB(); err == nil {
-		sqlDB.Close()
-	}
+	// Cerrar repositorio adaptativo (detiene retry loop y cierra conexiones)
+	repo.Close()
 }
