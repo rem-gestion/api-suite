@@ -37,6 +37,16 @@ func main() {
 	cfg := config.Load()
 	lg := logger.New(cfg.Logger, "auth-identity-svc")
 
+	// Mostrar información del entorno
+	serverPort := cfg.GetServerPort()
+	_, grpcPort := cfg.GetGRPCConfig()
+	lg.Info("starting auth-identity service",
+		zap.String("service", cfg.ServiceName),
+		zap.String("environment", cfg.Environment.String()),
+		zap.String("database", cfg.Postgres.Database),
+		zap.String("http_port", fmt.Sprintf("%d", serverPort)),
+		zap.String("grpc_port", fmt.Sprintf("%d", grpcPort)))
+
 	/* ---------- Postgres ---------- */
 	pg, err := db.NewPostgres(cfg.Postgres)
 	if err != nil {
@@ -48,7 +58,7 @@ func main() {
 	userRepo := repository.NewUserRepository(pg)
 
 	/* ---------- dial a person-svc ---------- */
-	personTarget := fmt.Sprintf("%s:%d", cfg.Person.Host, cfg.Person.Port)
+	personTarget := cfg.GetServiceGRPCAddress("person")
 	personConn, err := rcgrpc.Dial(personTarget) // helper con timeout & keep-alive
 	if err != nil {
 		lg.Warn("dial person-svc failed", zap.Error(err))
@@ -97,7 +107,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
 	httpSrv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:         fmt.Sprintf(":%d", serverPort),
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -107,7 +117,7 @@ func main() {
 	/* ---------- gRPC ---------- */
 	kp := keepalive.ServerParameters{Time: 2 * time.Hour, Timeout: 20 * time.Second}
 	grpcSrv := rcgrpc.NewServer(lg, kp)
-	grpcAddr := fmt.Sprintf("%s:%d", "0.0.0.0", 50053) //cfg.GRPC.Host, cfg.GRPC.Port)
+	grpcAddr := cfg.GetGRPCAddress()
 
 	authpb.RegisterAuthIdentityServiceServer(grpcSrv, grpcHandler.New(authService, userService))
 

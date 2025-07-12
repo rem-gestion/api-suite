@@ -6,9 +6,12 @@ import (
 )
 
 func Setup(r *gin.Engine, ctrl *controller.Ctrl) {
-	g := r.Group("/addresses")
-	g.POST("", ctrl.Create)
-	g.GET("/:id", ctrl.Get)
-	g.PUT("/:id", ctrl.Update)
-	g.DELETE("/:id", ctrl.Delete)
+	// API Gateway enrutará /api/addresses/ a este servicio
+	// Por lo tanto, usamos "/" como base para evitar duplicación
+
+	r.GET("/", ctrl.List) // Lista todas las direcciones
+	r.POST("/", ctrl.Create)
+	r.GET("/:id", ctrl.Get)
+	r.PUT("/:id", ctrl.Update)
+	r.DELETE("/:id", ctrl.Delete)
 }

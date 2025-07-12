@@ -40,7 +40,7 @@ type Person struct {
 	Contactos  []Contacto  `gorm:"foreignKey:PersonaID"`
 }
 
-func (Person) TableName() string { return "person" }
+func (Person) TableName() string { return "person_person" }
 
 // -------- sub-tipos ----------
 type Individual struct {
@@ -55,7 +55,7 @@ type Individual struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
-func (Individual) TableName() string { return "individual" }
+func (Individual) TableName() string { return "person_individual" }
 
 type Company struct {
 	PersonID    uuid.UUID `gorm:"type:uuid;primaryKey"`
@@ -69,7 +69,7 @@ type Company struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
-func (Company) TableName() string { return "company" }
+func (Company) TableName() string { return "person_company" }
 
 // ---------- contacto ----------
 type Contacto struct {
@@ -85,4 +85,4 @@ type Contacto struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
-func (Contacto) TableName() string { return "contacto" }
+func (Contacto) TableName() string { return "person_contacto" }

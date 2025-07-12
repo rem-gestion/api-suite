@@ -33,6 +33,16 @@ func main() {
 	cfg := config.Load()
 	lg := logger.New(cfg.Logger, "address-svc")
 
+	// Mostrar información del entorno
+	serverPort := cfg.GetServerPort()
+	_, grpcPort := cfg.GetGRPCConfig()
+	lg.Info("starting address service",
+		zap.String("service", cfg.ServiceName),
+		zap.String("environment", cfg.Environment.String()),
+		zap.String("database", cfg.Postgres.Database),
+		zap.String("http_port", fmt.Sprintf("%d", serverPort)),
+		zap.String("grpc_port", fmt.Sprintf("%d", grpcPort)))
+
 	/* DB ------------------------------------------------- */
 	lg.Info("initializing adaptive repository with database resilience")
 
@@ -54,14 +64,8 @@ func main() {
 	/* REST ---------------------------------------------- */
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(
-		mw.RequestID(),
-		mw.APIKeyAuth("X-Api-Key", cfg.APIKey),
-		mw.GinLogger(lg),
-		mw.RecoveryWithZap(lg),
-		mw.ErrorHandler(),
-	)
-	router.Setup(r, ctrl)
+
+	// Health endpoints sin autenticación
 	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	r.GET("/health/detailed", func(c *gin.Context) {
 		stats := svc.GetRepositoryStats()
@@ -71,6 +75,16 @@ func main() {
 			"using_memory_fallback": svc.IsUsingMemoryFallback(),
 		})
 	})
+
+	// Aplicar middlewares para rutas protegidas
+	r.Use(
+		mw.RequestID(),
+		mw.APIKeyAuth("X-Api-Key", cfg.APIKey),
+		mw.GinLogger(lg),
+		mw.RecoveryWithZap(lg),
+		mw.ErrorHandler(),
+	)
+	router.Setup(r, ctrl)
 	r.POST("/admin/sync-memory", func(c *gin.Context) {
 		if err := svc.ForceMemorySync(); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -83,12 +97,12 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "reconnection attempt triggered"})
 	})
 
-	httpSrv := &http.Server{Addr: ":4000", Handler: r} // ★
+	httpSrv := &http.Server{Addr: fmt.Sprintf(":%d", serverPort), Handler: r}
 
 	/* gRPC ---------------------------------------------- */
 	kp := keepalive.ServerParameters{Time: 2 * time.Hour, Timeout: 20 * time.Second}
 	grpcSrv := rcgrpc.NewServer(lg, kp)
-	grpcAddr := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
+	grpcAddr := cfg.GetGRPCAddress()
 
 	pb.RegisterAddressServiceServer(grpcSrv, grpcHandler.New(svc))
 

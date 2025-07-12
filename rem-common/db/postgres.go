@@ -12,8 +12,8 @@ import (
 
 func NewPostgres(cfg config.PostgresConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=UTC",
-		cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port, cfg.SSLMode,
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=UTC",
+		cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, cfg.SSLMode,
 	)
 	gormLogger := logger.Default.LogMode(logger.Silent)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormLogger})

@@ -7,7 +7,7 @@ services:
     container_name: postgres_address
     restart: unless-stopped
     environment:
-      POSTGRES_USER:     lucho
+      POSTGRES_USER:     user
       POSTGRES_PASSWORD: supersecreta
       POSTGRES_DB:       remgestion_address
     ports:
@@ -21,7 +21,7 @@ services:
     container_name: postgres_person
     restart: unless-stopped
     environment:
-      POSTGRES_USER:     lucho
+      POSTGRES_USER:     user
       POSTGRES_PASSWORD: supersecreta
       POSTGRES_DB:       remgestion_person
     ports:
@@ -35,7 +35,7 @@ services:
     container_name: postgres_auth
     restart: unless-stopped
     environment:
-      POSTGRES_USER:     lucho
+      POSTGRES_USER:     user
       POSTGRES_PASSWORD: supersecreta
       POSTGRES_DB:       remgestion_auth
     ports:

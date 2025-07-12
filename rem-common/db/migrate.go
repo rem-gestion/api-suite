@@ -129,8 +129,8 @@ func applyMigrations(driver database.Driver, dbName, migrationsPath, direction s
 /* ---------- DSN builders ---------- */
 
 func buildPgDSN(c config.PostgresConfig) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.User, c.Password, c.Host, c.Port, c.DBName, c.SSLMode)
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		c.User, c.Password, c.Host, c.Port, c.Database, c.SSLMode)
 }
 
 func buildMyDSN(c config.MySQLConfig) string {

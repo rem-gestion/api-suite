@@ -16,3 +16,8 @@ type Address struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+// TableName specifies the table name for GORM
+func (Address) TableName() string {
+	return "address_addresses"
+}

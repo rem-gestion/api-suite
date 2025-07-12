@@ -14,8 +14,8 @@ import (
 func NewGormDB(cfg config.PostgresConfig) (*gorm.DB, error) {
 	// Armamos el DSN con el config
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=UTC",
-		cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port, cfg.SSLMode,
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=UTC",
+		cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, cfg.SSLMode,
 	)
 
 	// Configuramos el logger de GORM con nivel (podrías mapear el cfg.Logger.Level acá)

@@ -1,7 +1,15 @@
 ###############################################################################
 # ▸ Variables de entorno (en cualquier carpeta)
 ###############################################################################
-*.env
+# Excluir archivos con secretos reales
+.env
+.env.local
+.env.production
+.env.*.local
+
+# INCLUIR archivos de configuración de desarrollo (sin secretos)
+# .env.development (estos SÍ se commitean)
+# .env.production.example (plantillas SÍ se commitean)
 
 ###############################################################################
 # ▸ Archivos / carpetas temporales y de build

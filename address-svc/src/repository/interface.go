@@ -8,6 +8,7 @@ import (
 type AddressRepository interface {
 	Create(a *model.Address) (*model.Address, error)
 	Get(id string) (*model.Address, error)
+	List(city string, limit, offset int) ([]model.Address, error)
 	Update(a *model.Address) error
 	Delete(id string) error
 }

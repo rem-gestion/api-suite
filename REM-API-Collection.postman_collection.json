@@ -1,0 +1,1152 @@
+{
+	"info": {
+		"_postman_id": "rem-api-collection",
+		"name": "REM Real Estate Management API",
+		"description": "Complete collection for testing REM microservices through API Gateway\n\n**Base URL**: {{base_url}} (http://localhost:8081)\n\n**Services**:\n- Auth & Identity Service: Authentication, users, profiles\n- Person Service: Individuals, companies, contacts\n- Address Service: Property addresses\n\n**Test Users** (from seed data):\n- juan.perez@example.com / password\n- maria.gonzalez@example.com / password\n- admin@acmecorp.com / password (company)\n\n**Usage**:\n1. Run authentication requests to get tokens\n2. Use {{access_token}} in subsequent requests\n3. Test CRUD operations on persons, addresses, and contacts",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication & Users",
+			"description": "Authentication, user management, and profile operations",
+			"item": [
+				{
+					"name": "📝 Register New User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"person\": {\n    \"type\": \"individual\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"dni\": \"12345678\",\n    \"sexo\": \"masculino\",\n    \"address\": {\n      \"street\": \"Test Street\",\n      \"number\": 123,\n      \"city\": \"Test City\",\n      \"state\": \"Test State\",\n      \"zip\": \"1234\",\n      \"country\": \"AR\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new user with optional person data"
+					},
+					"response": []
+				},
+				{
+					"name": "🔑 Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.access_token);",
+									"    pm.environment.set('refresh_token', response.refresh_token);",
+									"    pm.environment.set('user_id', response.user.id);",
+									"    if (response.user.person_id) {",
+									"        pm.environment.set('person_id', response.user.person_id);",
+									"    }",
+									"    console.log('Tokens saved to environment');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login with email and password. Auto-saves tokens to environment."
+					},
+					"response": []
+				},
+				{
+					"name": "🔄 Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.access_token);",
+									"    pm.environment.set('refresh_token', response.refresh_token);",
+									"    console.log('Tokens refreshed');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "refresh"]
+						},
+						"description": "Refresh access token using refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Validate Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/validate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "validate"]
+						},
+						"description": "Validate current access token"
+					},
+					"response": []
+				},
+				{
+					"name": "👤 Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "me"]
+						},
+						"description": "Get current user profile information"
+					},
+					"response": []
+				},
+				{
+					"name": "🚪 Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "logout"]
+						},
+						"description": "Logout current user"
+					},
+					"response": []
+				},
+				{
+					"name": "🔐 Users Management",
+					"description": "User management endpoints (require authentication)",
+					"item": [
+						{
+							"name": "📋 List Users",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/users?page=1&per_page=10",
+									"host": ["{{base_url}}"],
+									"path": ["api", "users"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "per_page",
+											"value": "10"
+										}
+									]
+								},
+								"description": "List all users with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Get User by Email",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/users/email/juan.perez@example.com",
+									"host": ["{{base_url}}"],
+									"path": ["api", "users", "email", "juan.perez@example.com"]
+								},
+								"description": "Get user by email address"
+							},
+							"response": []
+						},
+						{
+							"name": "✏️ Update Profile",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"onboard_status\": \"done\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/users/profile",
+									"host": ["{{base_url}}"],
+									"path": ["api", "users", "profile"]
+								},
+								"description": "Update current user profile"
+							},
+							"response": []
+						},
+						{
+							"name": "❌ Deactivate User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/users/{{user_id}}/deactivate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "users", "{{user_id}}", "deactivate"]
+								},
+								"description": "Deactivate a user account"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "👥 Persons & Companies",
+			"description": "Person management: individuals, companies, and their contacts",
+			"item": [
+				{
+					"name": "📋 List Persons",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.environment.set('person_id', response.data[0].id);",
+									"        console.log('First person ID saved:', response.data[0].id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/persons?page=1&per_page=10&type=individual&with_contacts=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								},
+								{
+									"key": "type",
+									"value": "individual",
+									"description": "Filter by type: individual or company"
+								},
+								{
+									"key": "with_contacts",
+									"value": "true",
+									"description": "Include contacts in response"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by name",
+									"disabled": true
+								}
+							]
+						},
+						"description": "List persons with filtering and pagination. Auto-saves first person ID."
+					},
+					"response": []
+				},
+				{
+					"name": "👤 Get Person by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/persons/{{person_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons", "{{person_id}}"]
+						},
+						"description": "Get person details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "👤📍 Get Person with Address (Full)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/persons/{{person_id}}/full",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons", "{{person_id}}", "full"]
+						},
+						"description": "Get person with expanded address information"
+					},
+					"response": []
+				},
+				{
+					"name": "➕ Create Individual Person",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('person_id', response.id);",
+									"    console.log('New person ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"individual\",\n  \"first_name\": \"Roberto\",\n  \"last_name\": \"García\",\n  \"dni\": \"87654321\",\n  \"sexo\": \"masculino\",\n  \"address\": {\n    \"street\": \"Av. Rivadavia\",\n    \"number\": 5000,\n    \"city\": \"Buenos Aires\",\n    \"state\": \"CABA\",\n    \"zip\": \"1424\",\n    \"country\": \"AR\"\n  },\n  \"contacts\": [\n    {\n      \"type\": \"email\",\n      \"value\": \"roberto.garcia@example.com\",\n      \"is_primary\": true\n    },\n    {\n      \"type\": \"phone\",\n      \"value\": \"+54911234567\",\n      \"is_primary\": false\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/persons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons"]
+						},
+						"description": "Create a new individual person with address and contacts"
+					},
+					"response": []
+				},
+				{
+					"name": "🏢 Create Company",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('person_id', response.id);",
+									"    console.log('New company ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"company\",\n  \"legal_name\": \"Nueva Empresa SRL\",\n  \"cuit\": \"30876543210\",\n  \"society_type\": \"S.R.L.\",\n  \"address\": {\n    \"street\": \"Florida\",\n    \"number\": 850,\n    \"floor\": \"10\",\n    \"unit\": \"A\",\n    \"city\": \"Buenos Aires\",\n    \"state\": \"CABA\",\n    \"zip\": \"1005\",\n    \"country\": \"AR\"\n  },\n  \"contacts\": [\n    {\n      \"type\": \"email\",\n      \"value\": \"info@nuevaempresa.com\",\n      \"is_primary\": true\n    },\n    {\n      \"type\": \"phone\",\n      \"value\": \"+541144556677\",\n      \"is_primary\": true\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/persons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons"]
+						},
+						"description": "Create a new company with address and contacts"
+					},
+					"response": []
+				},
+				{
+					"name": "📝 Update Person",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Roberto Carlos\",\n  \"last_name\": \"García Pérez\",\n  \"avatar_url\": \"https://avatar.example.com/roberto.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/persons/{{person_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons", "{{person_id}}"]
+						},
+						"description": "Update person information"
+					},
+					"response": []
+				},
+				{
+					"name": "🗑️ Delete Person",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/persons/{{person_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons", "{{person_id}}"]
+						},
+						"description": "Delete a person"
+					},
+					"response": []
+				},
+				{
+					"name": "📦 Bulk Create Persons",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"persons\": [\n    {\n      \"type\": \"individual\",\n      \"first_name\": \"Pedro\",\n      \"last_name\": \"López\",\n      \"dni\": \"11111111\",\n      \"sexo\": \"masculino\"\n    },\n    {\n      \"type\": \"individual\",\n      \"first_name\": \"Carla\",\n      \"last_name\": \"Sánchez\",\n      \"dni\": \"22222222\",\n      \"sexo\": \"femenino\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/persons/bulk",
+							"host": ["{{base_url}}"],
+							"path": ["api", "persons", "bulk"]
+						},
+						"description": "Create multiple persons in a single request"
+					},
+					"response": []
+				},
+				{
+					"name": "📱 Contacts Management",
+					"description": "Contact management for persons",
+					"item": [
+						{
+							"name": "📋 List Person Contacts",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.length > 0) {",
+											"        pm.environment.set('contact_id', response[0].id);",
+											"        console.log('First contact ID saved:', response[0].id);",
+											"    }",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/persons/{{person_id}}/contacts",
+									"host": ["{{base_url}}"],
+									"path": ["api", "persons", "{{person_id}}", "contacts"]
+								},
+								"description": "Get all contacts for a person. Auto-saves first contact ID."
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Add Contact to Person",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.environment.set('contact_id', response.id);",
+											"    console.log('New contact ID saved:', response.id);",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"type\": \"phone\",\n  \"value\": \"+54911999888\",\n  \"is_primary\": false,\n  \"notes\": \"Teléfono personal\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/persons/{{person_id}}/contacts",
+									"host": ["{{base_url}}"],
+									"path": ["api", "persons", "{{person_id}}", "contacts"]
+								},
+								"description": "Add a new contact to a person"
+							},
+							"response": []
+						},
+						{
+							"name": "🎯 Get Primary Contact",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/contacts/primary/{{person_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "contacts", "primary", "{{person_id}}"]
+								},
+								"description": "Get primary contact for a person"
+							},
+							"response": []
+						},
+						{
+							"name": "✏️ Update Contact",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"value\": \"+54911888999\",\n  \"is_primary\": true,\n  \"notes\": \"Teléfono principal actualizado\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/contacts/{{contact_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "contacts", "{{contact_id}}"]
+								},
+								"description": "Update contact information"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Contact",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/contacts/{{contact_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "contacts", "{{contact_id}}"]
+								},
+								"description": "Delete a contact"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "🏠 Addresses",
+			"description": "Address management for properties and locations",
+			"item": [
+				{
+					"name": "🏠 Get Address by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/addresses/{{address_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "addresses", "{{address_id}}"]
+						},
+						"description": "Get address details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "➕ Create Address",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('address_id', response.id);",
+									"    console.log('New address ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"street\": \"Avenida Libertador\",\n  \"number\": 2500,\n  \"floor\": \"15\",\n  \"unit\": \"B\",\n  \"city\": \"Buenos Aires\",\n  \"state\": \"CABA\",\n  \"zip\": \"1425\",\n  \"country\": \"AR\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/addresses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "addresses"]
+						},
+						"description": "Create a new address. Auto-saves address ID."
+					},
+					"response": []
+				},
+				{
+					"name": "✏️ Update Address",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"street\": \"Avenida Libertador\",\n  \"number\": 2500,\n  \"floor\": \"16\",\n  \"unit\": \"A\",\n  \"city\": \"Buenos Aires\",\n  \"state\": \"CABA\",\n  \"zip\": \"1425\",\n  \"country\": \"AR\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/addresses/{{address_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "addresses", "{{address_id}}"]
+						},
+						"description": "Update address information"
+					},
+					"response": []
+				},
+				{
+					"name": "🗑️ Delete Address",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/addresses/{{address_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "addresses", "{{address_id}}"]
+						},
+						"description": "Delete an address"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🩺 Health Checks",
+			"description": "Health check endpoints for monitoring",
+			"item": [
+				{
+					"name": "🌐 API Gateway Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Check API Gateway health status"
+					},
+					"response": []
+				},
+				{
+					"name": "🔐 Auth Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health/auth",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health", "auth"]
+						},
+						"description": "Check Auth Service health via API Gateway"
+					},
+					"response": []
+				},
+				{
+					"name": "👥 Person Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health/person",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health", "person"]
+						},
+						"description": "Check Person Service health via API Gateway"
+					},
+					"response": []
+				},
+				{
+					"name": "🏠 Address Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health/address",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health", "address"]
+						},
+						"description": "Check Address Service health via API Gateway"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔧 Direct Service Access (Debug)",
+			"description": "Direct access to services bypassing API Gateway (for debugging)",
+			"item": [
+				{
+					"name": "🔐 Auth Service Direct",
+					"item": [
+						{
+							"name": "Health Check",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{auth_service_url}}/health",
+									"host": ["{{auth_service_url}}"],
+									"path": ["health"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Login Direct",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"password\"\n}"
+								},
+								"url": {
+									"raw": "{{auth_service_url}}/login",
+									"host": ["{{auth_service_url}}"],
+									"path": ["login"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "👥 Person Service Direct",
+					"item": [
+						{
+							"name": "Health Check",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{person_service_url}}/health",
+									"host": ["{{person_service_url}}"],
+									"path": ["health"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List Persons Direct",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{person_service_url}}/",
+									"host": ["{{person_service_url}}"],
+									"path": [""]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "🏠 Address Service Direct",
+					"item": [
+						{
+							"name": "Health Check",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{address_service_url}}/health",
+									"host": ["{{address_service_url}}"],
+									"path": ["health"]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"// Add timestamp for debugging",
+					"pm.globals.set('timestamp', new Date().toISOString());",
+					"",
+					"// Get current request info",
+					"const currentUrl = pm.request.url.toString();",
+					"const method = pm.request.method;",
+					"",
+					"// Auto-add API Key header for services that need it",
+					"const needsApiKey = [",
+					"    '/api/persons',",
+					"    '/api/addresses',",
+					"    '/api/contacts',",
+					"    '/api/health/address'",
+					"];",
+					"",
+					"const needsAuth = needsApiKey.some(path => currentUrl.includes(path));",
+					"",
+					"if (needsAuth) {",
+					"    const apiKey = pm.environment.get('api_key');",
+					"    if (apiKey) {",
+					"        pm.request.headers.add({",
+					"            key: 'X-Api-Key',",
+					"            value: apiKey",
+					"        });",
+					"        console.log('✅ Added API Key header');",
+					"    } else {",
+					"        console.warn('⚠️ API Key required but not found in environment');",
+					"    }",
+					"}",
+					"",
+					"// Auto-add JWT token for authenticated endpoints",
+					"const needsJWT = [",
+					"    '/api/auth/me',",
+					"    '/api/auth/logout',",
+					"    '/api/users'",
+					"];",
+					"",
+					"const needsToken = needsJWT.some(path => currentUrl.includes(path));",
+					"",
+					"if (needsToken) {",
+					"    const accessToken = pm.environment.get('access_token');",
+					"    if (accessToken) {",
+					"        pm.request.headers.add({",
+					"            key: 'Authorization',",
+					"            value: `Bearer ${accessToken}`",
+					"        });",
+					"        console.log('✅ Added JWT Authorization header');",
+					"    } else {",
+					"        console.warn('⚠️ JWT token required but not found in environment. Run login first.');",
+					"    }",
+					"}",
+					"",
+					"// Auto-populate request body with environment variables for specific endpoints",
+					"if (method === 'POST' || method === 'PUT') {",
+					"    try {",
+					"        let body = pm.request.body;",
+					"        if (body && body.mode === 'raw') {",
+					"            let bodyString = body.raw;",
+					"            ",
+					"            // Replace placeholders with environment variables",
+					"            bodyString = bodyString.replace(/{{person_id}}/g, pm.environment.get('person_id') || '');",
+					"            bodyString = bodyString.replace(/{{address_id}}/g, pm.environment.get('address_id') || '');",
+					"            bodyString = bodyString.replace(/{{contact_id}}/g, pm.environment.get('contact_id') || '');",
+					"            bodyString = bodyString.replace(/{{test_email}}/g, pm.environment.get('test_email') || '');",
+					"            bodyString = bodyString.replace(/{{test_password}}/g, pm.environment.get('test_password') || '');",
+					"            bodyString = bodyString.replace(/{{test_dni}}/g, pm.environment.get('test_dni') || '');",
+					"            bodyString = bodyString.replace(/{{test_phone}}/g, pm.environment.get('test_phone') || '');",
+					"            bodyString = bodyString.replace(/{{test_personal_email}}/g, pm.environment.get('test_personal_email') || '');",
+					"            ",
+					"            // Update the request body",
+					"            pm.request.body.raw = bodyString;",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('Body replacement skipped:', e.message);",
+					"    }",
+					"}",
+					"",
+					"// Log request details for debugging",
+					"console.log(`🚀 ${method} ${currentUrl}`);",
+					"if (needsAuth) console.log('🔑 API Key: Required');",
+					"if (needsToken) console.log('🎫 JWT Token: Required');"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"// Log basic response info",
+					"console.log(`${pm.info.requestName}: ${pm.response.status} ${pm.response.code}`);",
+					"",
+					"// Auto-save important IDs from responses",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    try {",
+					"        const response = pm.response.json();",
+					"        const currentUrl = pm.request.url.toString();",
+					"        ",
+					"        // Save login tokens from auth endpoints",
+					"        if (currentUrl.includes('/api/auth/login') && response.access_token) {",
+					"            pm.environment.set('access_token', response.access_token);",
+					"            pm.environment.set('refresh_token', response.refresh_token || '');",
+					"            console.log('🎫 Saved JWT tokens from login');",
+					"        }",
+					"        ",
+					"        // Save user info from auth endpoints",
+					"        if (currentUrl.includes('/api/auth/me') && response.id) {",
+					"            pm.environment.set('user_id', response.id);",
+					"            pm.environment.set('person_id', response.person_id || '');",
+					"            console.log('👤 Saved user info from /me endpoint');",
+					"        }",
+					"        ",
+					"        // Save person ID if creating/getting person",
+					"        if (response.id && currentUrl.includes('/api/persons')) {",
+					"            pm.environment.set('person_id', response.id);",
+					"            console.log('👤 Saved person_id:', response.id);",
+					"            ",
+					"            // If it's a person with address, save address ID too",
+					"            if (response.address_id) {",
+					"                pm.environment.set('address_id', response.address_id);",
+					"                console.log('🏠 Saved address_id from person:', response.address_id);",
+					"            }",
+					"        }",
+					"        ",
+					"        // Save address ID if creating/getting address",
+					"        if (response.id && currentUrl.includes('/api/addresses')) {",
+					"            pm.environment.set('address_id', response.id);",
+					"            console.log('🏠 Saved address_id:', response.id);",
+					"        }",
+					"        ",
+					"        // Save contact ID if creating/getting contact",
+					"        if (response.id && currentUrl.includes('/api/contacts')) {",
+					"            pm.environment.set('contact_id', response.id);",
+					"            console.log('📞 Saved contact_id:', response.id);",
+					"        }",
+					"        ",
+					"        // Save first ID from list responses",
+					"        if (Array.isArray(response) && response.length > 0 && response[0].id) {",
+					"            if (currentUrl.includes('/api/persons')) {",
+					"                pm.environment.set('person_id', response[0].id);",
+					"                console.log('👤 Saved first person_id from list:', response[0].id);",
+					"            }",
+					"            if (currentUrl.includes('/api/addresses')) {",
+					"                pm.environment.set('address_id', response[0].id);",
+					"                console.log('🏠 Saved first address_id from list:', response[0].id);",
+					"            }",
+					"            if (currentUrl.includes('/api/contacts')) {",
+					"                pm.environment.set('contact_id', response[0].id);",
+					"                console.log('📞 Saved first contact_id from list:', response[0].id);",
+					"            }",
+					"        }",
+					"        ",
+					"        // Save other useful data based on endpoint",
+					"        if (currentUrl.includes('/api/persons') && response.individual) {",
+					"            if (response.individual.dni) {",
+					"                console.log('📋 Person DNI:', response.individual.dni);",
+					"            }",
+					"        }",
+					"        ",
+					"    } catch (e) {",
+					"        // Response is not JSON, skip auto-save",
+					"        console.log('ℹ️ Non-JSON response, skipping auto-save');",
+					"    }",
+					"} else {",
+					"    console.log('❌ Request failed with status:', pm.response.code);",
+					"    ",
+					"    // Log error details if available",
+					"    try {",
+					"        const errorResponse = pm.response.json();",
+					"        if (errorResponse.error) {",
+					"            console.log('Error details:', errorResponse.error);",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('Error response body:', pm.response.text());",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8081",
+			"description": "Default base URL if environment is not set"
+		}
+	]
+}

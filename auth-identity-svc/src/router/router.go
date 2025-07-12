@@ -28,41 +28,39 @@ func SetupRoutes(
 	// 	})
 	// })
 
-	// API v1 group
-	v1 := router.Group("/api/v1")
+	// Rutas de autenticación (públicas)
+	// API Gateway enrutará /api/auth/ aquí, por lo que usamos "/" como base
+	auth := router.Group("/")
 	{
-		// Rutas de autenticación (públicas)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/register", authController.Register)
-			auth.POST("/login", authController.Login)
-			auth.POST("/refresh", authController.RefreshToken)
-			auth.POST("/forgot-password", authController.ForgotPassword)
-			auth.POST("/reset-password", authController.ResetPassword)
-			auth.GET("/validate", authController.ValidateToken) // Para validar tokens externamente
-		}
+		auth.POST("/register", authController.Register)
+		auth.POST("/login", authController.Login)
+		auth.POST("/refresh", authController.RefreshToken)
+		auth.POST("/forgot-password", authController.ForgotPassword)
+		auth.POST("/reset-password", authController.ResetPassword)
+		auth.GET("/validate", authController.ValidateToken) // Para validar tokens externamente
+	}
 
-		// Rutas protegidas de autenticación
-		authProtected := v1.Group("/auth")
-		authProtected.Use(middleware.UserAuth(jwtSecret))
-		{
-			authProtected.GET("/me", authController.GetProfile)
-			authProtected.POST("/logout", authController.Logout)
-		}
+	// Rutas protegidas de autenticación
+	authProtected := router.Group("/")
+	authProtected.Use(middleware.UserAuth(jwtSecret))
+	{
+		authProtected.GET("/me", authController.GetProfile)
+		authProtected.POST("/logout", authController.Logout)
+	}
 
-		// Rutas de usuarios protegidas
-		users := v1.Group("/users")
-		users.Use(middleware.UserAuth(jwtSecret))
-		{
-			// Rutas para el usuario actual
-			users.PUT("/profile", userController.UpdateProfile)
+	// Rutas de usuarios protegidas
+	// API Gateway enrutará /api/users/ a estas rutas
+	users := router.Group("/users")
+	users.Use(middleware.UserAuth(jwtSecret))
+	{
+		// Rutas para el usuario actual
+		users.PUT("/profile", userController.UpdateProfile)
 
-			// Rutas administrativas (requieren permisos de admin)
-			// TODO: Agregar middleware de admin cuando esté disponible
-			users.GET("", userController.ListUsers)                      // GET /api/v1/users
-			users.GET("/email/:email", userController.GetUserByEmail)    // GET /api/v1/users/email/{email}
-			users.POST("/:id/deactivate", userController.DeactivateUser) // POST /api/v1/users/{id}/deactivate
-		}
+		// Rutas administrativas (requieren permisos de admin)
+		// TODO: Agregar middleware de admin cuando esté disponible
+		users.GET("/", userController.ListUsers)                     // GET /users
+		users.GET("/email/:email", userController.GetUserByEmail)    // GET /users/email/{email}
+		users.POST("/:id/deactivate", userController.DeactivateUser) // POST /users/{id}/deactivate
 	}
 }
 
@@ -74,6 +72,7 @@ func SetupPublicRoutes(authController *controllers.AuthController) *gin.Engine {
 	router.Use(middleware.RequestID())
 	router.Use(middleware.ErrorHandler())
 
+	// Para testing, mantenemos las rutas originales con /api/v1
 	v1 := router.Group("/api/v1")
 	{
 		auth := v1.Group("/auth")

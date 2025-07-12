@@ -36,6 +36,31 @@ func (c *Ctrl) Get(ctx *gin.Context) {
 	ctx.JSON(200, a)
 }
 
+func (c *Ctrl) List(ctx *gin.Context) {
+	// Parámetros de consulta opcionales
+	city := ctx.DefaultQuery("city", "")
+	limit := 20 // por defecto
+	offset := 0 // por defecto
+
+	// Aquí podrías agregar lógica para parsear limit y offset desde query params si es necesario
+
+	addresses, err := c.svc.List(city, limit, offset)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	// Respuesta con formato similar al person service
+	response := map[string]interface{}{
+		"data":  addresses,
+		"page":  1,
+		"per":   limit,
+		"total": len(addresses),
+	}
+
+	ctx.JSON(200, response)
+}
+
 func (c *Ctrl) Update(ctx *gin.Context) {
 	var in dto.AddressUpdate
 	if err := ctx.ShouldBindJSON(&in); err != nil {

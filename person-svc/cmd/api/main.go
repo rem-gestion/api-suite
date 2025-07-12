@@ -38,6 +38,16 @@ func main() {
 	cfg := config.Load()
 	lg := logger.New(cfg.Logger, "person-svc")
 
+	// Mostrar información del entorno
+	serverPort := cfg.GetServerPort()
+	_, grpcPort := cfg.GetGRPCConfig()
+	lg.Info("starting person service",
+		zap.String("service", cfg.ServiceName),
+		zap.String("environment", cfg.Environment.String()),
+		zap.String("database", cfg.Postgres.Database),
+		zap.String("http_port", fmt.Sprintf("%d", serverPort)),
+		zap.String("grpc_port", fmt.Sprintf("%d", grpcPort)))
+
 	/* ---------- Postgres ---------- */
 	pg, err := db.NewPostgres(cfg.Postgres)
 	if err != nil {
@@ -47,7 +57,7 @@ func main() {
 	repo := repository.NewPersonRepo(pg, lg.Named("repo"))
 
 	/* ---------- dial a address-svc ---------- */
-	addrTarget := fmt.Sprintf("%s:%d", cfg.Address.Host, cfg.Address.Port)
+	addrTarget := cfg.GetServiceGRPCAddress("address")
 	addrConn, err := rcgrpc.Dial(addrTarget) // helper con timeout & keep-alive
 	if err != nil {
 		lg.Fatal("dial address-svc failed", zap.Error(err))
@@ -61,6 +71,11 @@ func main() {
 	/* ---------- HTTP ---------- */
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+
+	// Health endpoint sin autenticación
+	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+
+	// Aplicar middlewares para rutas protegidas
 	r.Use(
 		mw.RequestID(),
 		mw.APIKeyAuth("X-Api-Key", cfg.APIKey),
@@ -69,14 +84,13 @@ func main() {
 		mw.ErrorHandler(),
 	)
 	router.Setup(r, ctrl) // /persons, /contacts…
-	r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
-	httpSrv := &http.Server{Addr: ":4001", Handler: r}
+	httpSrv := &http.Server{Addr: fmt.Sprintf(":%d", serverPort), Handler: r}
 
 	/* ---------- gRPC ---------- */
 	kp := keepalive.ServerParameters{Time: 2 * time.Hour, Timeout: 20 * time.Second}
 	grpcSrv := rcgrpc.NewServer(lg, kp)
-	grpcAddr := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
+	grpcAddr := cfg.GetGRPCAddress()
 
 	personpb.RegisterPersonServiceServer(grpcSrv, grpcHandler.New(svc))
 

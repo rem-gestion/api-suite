@@ -6,27 +6,30 @@ import (
 )
 
 func Setup(r *gin.Engine, ctrl *controller.Ctrl) {
-	g := r.Group("/persons")
+	// API Gateway enrutará /api/persons/ a este servicio
+	// Por lo tanto, usamos "/" como base para evitar duplicación
 
 	// Personas
-	g.POST("/", ctrl.Create)
-	g.GET("/", ctrl.List)
-	g.GET("/:id", ctrl.Get)
-	g.GET("/:id/full", ctrl.GetFull) // NUEVO: persona con dirección expandida
-	g.PUT("/:id", ctrl.Update)
-	g.DELETE("/:id", ctrl.Delete)
+	r.POST("/", ctrl.Create)
+	r.GET("/", ctrl.List)
+	r.GET("/:id", ctrl.Get)
+	r.GET("/:id/full", ctrl.GetFull) // NUEVO: persona con dirección expandida
+	r.PUT("/:id", ctrl.Update)
+	r.DELETE("/:id", ctrl.Delete)
 
 	// Bulk operations
-	g.POST("/bulk", ctrl.BulkCreate) // NUEVO: creación masiva
+	r.POST("/bulk", ctrl.BulkCreate) // NUEVO: creación masiva
 
-	// Contactos
-	g.POST("/:id/contacts", ctrl.AddContact)
-	g.GET("/:id/contacts", ctrl.ListContacts)
+	// Contactos (usando la ruta /api/contacts/ del gateway)
+	r.POST("/:id/contacts", ctrl.AddContact)
+	r.GET("/:id/contacts", ctrl.ListContacts)
 
 	// contactos por id (sin necesidad del id de persona)
-	r.DELETE("/contacts/:contactID", ctrl.DeleteContact)
-	r.PUT("/contacts/:contactID", ctrl.UpdateContact)
-
-	// NUEVO: contacto primario por persona
-	r.GET("/contacts/primary/:personId", ctrl.GetPrimaryContact)
+	// Estas rutas serán manejadas por /api/contacts/ en el gateway
+	contacts := r.Group("/contacts")
+	{
+		contacts.DELETE("/:contactID", ctrl.DeleteContact)
+		contacts.PUT("/:contactID", ctrl.UpdateContact)
+		contacts.GET("/primary/:personId", ctrl.GetPrimaryContact) // NUEVO: contacto primario por persona
+	}
 }

@@ -82,6 +82,15 @@ func (s *AddressService) Get(id string) (*model.Address, error) {
 	return a, nil
 }
 
+func (s *AddressService) List(city string, limit, offset int) ([]model.Address, error) {
+	addresses, err := s.repo.List(city, limit, offset)
+	if err != nil {
+		s.lg.Warn("list failed", zap.String("city", city), zap.Int("limit", limit), zap.Int("offset", offset), zap.Error(err))
+		return nil, err
+	}
+	return addresses, nil
+}
+
 func (s *AddressService) Update(id string, in dto.AddressUpdate) (*model.Address, error) {
 	s.lg.Debug("update request", zap.String("id", id), zap.Any("payload", in))
 
