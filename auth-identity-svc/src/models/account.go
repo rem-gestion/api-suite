@@ -43,7 +43,7 @@ type Account struct {
 
 // TableName especifica el nombre de la tabla
 func (Account) TableName() string {
-	return "accounts"
+	return "auth_accounts"
 }
 
 // BeforeCreate hook de GORM para generar UUID

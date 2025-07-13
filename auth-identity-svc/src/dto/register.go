@@ -7,7 +7,7 @@ type RegisterRequest struct {
 	Provider string `json:"provider" binding:"omitempty,oneof=email google"`
 
 	// Datos de persona (opcional en registro inicial)
-	PersonData *PersonData `json:"person_data,omitempty"`
+	PersonData *PersonData `json:"person,omitempty"`
 }
 
 // PersonData representa los datos de persona para el registro

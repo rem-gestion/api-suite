@@ -88,9 +88,17 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 
 	// Validar persona si se proporcionan datos
 	if req.PersonData != nil {
+		log.Printf("DEBUG: PersonData received: %+v", req.PersonData)
 		if err := ValidatePersonDataHelper(s.validator, req.PersonData); err != nil {
 			return nil, &rerrors.BadRequestError{Msg: fmt.Sprintf("person data validation failed: %v", err)}
 		}
+	} else {
+		log.Printf("DEBUG: No PersonData provided")
+	}
+
+	// Verificar si el cliente de persona está disponible
+	if req.PersonData != nil && s.personClient == nil {
+		log.Printf("WARNING: PersonData provided but person client is nil")
 	}
 
 	// Verificar si el email ya existe
@@ -156,18 +164,24 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 
 	// Paso 2: Crear persona si se proporcionan datos
 	if req.PersonData != nil {
+		log.Printf("DEBUG: Adding create_person step to saga")
 		sagaInstance.AddStep(saga.Step{
 			Name: "create_person",
 			Execute: func(ctx context.Context) (interface{}, error) {
+				log.Printf("DEBUG: Executing create_person step")
 				if s.personClient == nil {
+					log.Printf("ERROR: person service client not available")
 					return nil, errors.New("person service client not available")
 				}
 
+				log.Printf("DEBUG: Calling personClient.CreatePerson with data: %+v", req.PersonData)
 				personResp, err := s.personClient.CreatePerson(req.PersonData)
 				if err != nil {
+					log.Printf("ERROR: Failed to create person via gRPC: %v", err)
 					return nil, fmt.Errorf("failed to create person: %w", err)
 				}
 
+				log.Printf("DEBUG: Person created successfully with ID: %s", personResp.Id)
 				personID = personResp.Id
 				return personResp.Id, nil
 			},
@@ -179,12 +193,15 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 				return nil
 			},
 		})
+	} else {
+		log.Printf("DEBUG: Skipping create_person step - no PersonData provided")
 	}
 
 	// Paso 3: Crear usuario
 	sagaInstance.AddStep(saga.Step{
 		Name: "create_user",
 		Execute: func(ctx context.Context) (interface{}, error) {
+			log.Printf("DEBUG: Creating user with accountID=%s, personID=%s", accountID, personID)
 			user := &models.User{
 				AccountID:     accountID,
 				OnboardStatus: models.OnboardNew,
@@ -193,6 +210,9 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 			if personID != "" {
 				user.PersonID = &personID
 				user.OnboardStatus = models.OnboardInProgress
+				log.Printf("DEBUG: User will be linked to person ID: %s", personID)
+			} else {
+				log.Printf("DEBUG: User will be created without person link")
 			}
 
 			if err := s.userRepo.Create(user); err != nil {
@@ -200,6 +220,7 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 			}
 
 			userID = user.ID
+			log.Printf("DEBUG: User created successfully with ID: %s", userID)
 			return user.ID, nil
 		},
 		Rollback: func(ctx context.Context, result interface{}) error {

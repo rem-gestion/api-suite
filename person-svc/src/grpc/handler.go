@@ -89,7 +89,7 @@ func toCreateDTO(r *personpb.CreatePersonRequest) dto.CreatePersonDTO {
 		out.Type = ""
 	}
 	if r.Sexo != personpb.Sexo_SEXO_UNSPECIFIED {
-		s := r.Sexo.String()
+		s := sexoToString(r.Sexo)
 		out.Sexo = &s
 	}
 	// address oneof
@@ -132,7 +132,7 @@ func toUpdateDTO(r *personpb.UpdatePersonRequest) dto.UpdatePersonDTO {
 		AvatarURL: strPtr(r.AvatarUrl),
 	}
 	if r.Sexo != personpb.Sexo_SEXO_UNSPECIFIED {
-		s := r.Sexo.String()
+		s := sexoToString(r.Sexo)
 		out.Sexo = &s
 	}
 	switch a := r.Address.(type) {
@@ -345,4 +345,16 @@ func (h *Handler) ListContacts(ctx context.Context, r *personpb.ListContactsRequ
 		out.Data = append(out.Data, contactToProto(&c))
 	}
 	return out, nil
+}
+
+// sexoToString convierte un enum protobuf Sexo a string en minúsculas (para la BD)
+func sexoToString(s personpb.Sexo) string {
+	switch s {
+	case personpb.Sexo_MASCULINO:
+		return "masculino"
+	case personpb.Sexo_FEMENINO:
+		return "femenino"
+	default:
+		return ""
+	}
 }

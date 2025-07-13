@@ -12,6 +12,26 @@
 			"item": [
 				{
 					"name": "📝 Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('registered_user_id', response.user_id);",
+									"    if (response.person_id) {",
+									"        pm.environment.set('registered_person_id', response.person_id);",
+									"    }",
+									"    console.log('Registration successful. User ID:', response.user_id);",
+									"    if (response.person_id) {",
+									"        console.log('Person ID:', response.person_id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -22,14 +42,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"person\": {\n    \"type\": \"individual\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"dni\": \"12345678\",\n    \"sexo\": \"masculino\",\n    \"address\": {\n      \"street\": \"Test Street\",\n      \"number\": 123,\n      \"city\": \"Test City\",\n      \"state\": \"Test State\",\n      \"zip\": \"1234\",\n      \"country\": \"AR\"\n    }\n  }\n}"
+							"raw": "{\n  \"email\": \"test.user.{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"person\": {\n    \"type\": \"individual\",\n    \"individual\": {\n      \"first_name\": \"Test\",\n      \"last_name\": \"User\",\n      \"dni\": \"12345678\",\n      \"sexo\": \"masculino\"\n    },\n    \"address\": {\n      \"street\": \"Test Street\",\n      \"number\": 123,\n      \"city\": \"Test City\",\n      \"state\": \"Test State\",\n      \"zip\": \"1234\",\n      \"country\": \"AR\"\n    }\n  }\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/register",
 							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "register"]
 						},
-						"description": "Register a new user with optional person data"
+						"description": "Register a new user with optional person data. Creates both user account and associated person record via microservices communication.\n\nPayload structure:\n- email: User email (required)\n- password: User password (required) \n- person: Person data (optional)\n  - type: 'individual' or 'company'\n  - individual: Individual person data (when type=individual)\n    - first_name, last_name, dni, sexo\n  - address: Address data (optional)\n    - street, number, city, state, zip, country\n\nResponse includes user_id and person_id for successful registrations."
 					},
 					"response": []
 				},
@@ -44,9 +64,9 @@
 									"    const response = pm.response.json();",
 									"    pm.environment.set('access_token', response.access_token);",
 									"    pm.environment.set('refresh_token', response.refresh_token);",
-									"    pm.environment.set('user_id', response.user.id);",
+									"    pm.environment.set('user_id', response.user_id);",
 									"    if (response.user.person_id) {",
-									"        pm.environment.set('person_id', response.user.person_id);",
+									"        pm.environment.set('person_id', response.person_id);",
 									"    }",
 									"    console.log('Tokens saved to environment');",
 									"}"
@@ -405,7 +425,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"individual\",\n  \"first_name\": \"Roberto\",\n  \"last_name\": \"García\",\n  \"dni\": \"87654321\",\n  \"sexo\": \"masculino\",\n  \"address\": {\n    \"street\": \"Av. Rivadavia\",\n    \"number\": 5000,\n    \"city\": \"Buenos Aires\",\n    \"state\": \"CABA\",\n    \"zip\": \"1424\",\n    \"country\": \"AR\"\n  },\n  \"contacts\": [\n    {\n      \"type\": \"email\",\n      \"value\": \"roberto.garcia@example.com\",\n      \"is_primary\": true\n    },\n    {\n      \"type\": \"phone\",\n      \"value\": \"+54911234567\",\n      \"is_primary\": false\n    }\n  ]\n}"
+							"raw": "{\n  \"type\": \"individual\",\n  \"individual\": {\n    \"first_name\": \"Roberto\",\n    \"last_name\": \"García\",\n    \"dni\": \"87654321\",\n    \"sexo\": \"masculino\"\n  },\n  \"address\": {\n    \"street\": \"Av. Rivadavia\",\n    \"number\": 5000,\n    \"city\": \"Buenos Aires\",\n    \"state\": \"CABA\",\n    \"zip\": \"1424\",\n    \"country\": \"AR\"\n  },\n  \"contacts\": [\n    {\n      \"type\": \"email\",\n      \"value\": \"roberto.garcia@example.com\",\n      \"is_primary\": true\n    },\n    {\n      \"type\": \"phone\",\n      \"value\": \"+54911234567\",\n      \"is_primary\": false\n    }\n  ]\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/persons",
@@ -519,7 +539,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"persons\": [\n    {\n      \"type\": \"individual\",\n      \"first_name\": \"Pedro\",\n      \"last_name\": \"López\",\n      \"dni\": \"11111111\",\n      \"sexo\": \"masculino\"\n    },\n    {\n      \"type\": \"individual\",\n      \"first_name\": \"Carla\",\n      \"last_name\": \"Sánchez\",\n      \"dni\": \"22222222\",\n      \"sexo\": \"femenino\"\n    }\n  ]\n}"
+							"raw": "[\n  {\n    \"type\": \"individual\",\n    \"individual\": {\n      \"first_name\": \"Pedro\",\n      \"last_name\": \"López\",\n      \"dni\": \"11111111\",\n      \"sexo\": \"masculino\"\n    }\n  },\n  {\n    \"type\": \"individual\",\n    \"individual\": {\n      \"first_name\": \"Carla\",\n      \"last_name\": \"Sánchez\",\n      \"dni\": \"22222222\",\n      \"sexo\": \"femenino\"\n    }\n  }\n]"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/persons/bulk",
