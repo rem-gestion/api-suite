@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/rem-gestion/api-suite/auth-identity/src/dto"
@@ -178,7 +179,7 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 				personResp, err := s.personClient.CreatePerson(req.PersonData)
 				if err != nil {
 					log.Printf("ERROR: Failed to create person via gRPC: %v", err)
-					return nil, fmt.Errorf("failed to create person: %w", err)
+					return nil, err // Ahora retornamos el error mapeado directamente
 				}
 
 				log.Printf("DEBUG: Person created successfully with ID: %s", personResp.Id)
@@ -248,6 +249,27 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.RegisterResponse, 
 	// Ejecutar saga
 	if err := sagaInstance.Execute(ctx); err != nil {
 		log.Printf("Saga execution failed: %v", err)
+		
+		// Extraer el error original de la saga para preservar el tipo
+		errorMsg := err.Error()
+		
+		// Buscar patrones específicos que indican errores de conflicto
+		if strings.Contains(errorMsg, "duplicate key value violates unique constraint") ||
+		   strings.Contains(errorMsg, "unique constraint") ||
+		   strings.Contains(errorMsg, "already exists") ||
+		   strings.Contains(errorMsg, "email already registered") {
+			return nil, &rerrors.ConflictError{Msg: "resource already exists"}
+		}
+		
+		// Buscar patrones que indican errores de validación
+		if strings.Contains(errorMsg, "validation failed") || 
+		   strings.Contains(errorMsg, "is required") ||
+		   strings.Contains(errorMsg, "must be at least") ||
+		   strings.Contains(errorMsg, "invalid") {
+			return nil, &rerrors.BadRequestError{Msg: "validation failed"}
+		}
+		
+		// Para otros errores, mantener como error interno
 		return nil, &rerrors.InternalServerError{Msg: "registration failed"}
 	}
 

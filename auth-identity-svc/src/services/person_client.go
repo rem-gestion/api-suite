@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/rem-gestion/api-suite/auth-identity/src/dto"
 	rcgrpc "github.com/rem-gestion/rem-common/grpc"
+	rerrors "github.com/rem-gestion/rem-common/errors"
 	personpb "github.com/rem-gestion/rem-common/protos/person/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // PersonServiceClient maneja la comunicación gRPC con person-svc
@@ -155,7 +159,48 @@ func (p *PersonServiceClient) CreatePerson(personData *dto.PersonData) (*personp
 		}
 	}
 
-	return p.client.CreatePerson(ctx, req)
+	resp, err := p.client.CreatePerson(ctx, req)
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return resp, nil
+}
+
+// mapGRPCError convierte errores gRPC a errores de dominio apropiados
+func mapGRPCError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		return &rerrors.InternalServerError{Msg: "unknown gRPC error"}
+	}
+
+	message := st.Message()
+
+	switch st.Code() {
+	case codes.InvalidArgument:
+		return &rerrors.BadRequestError{Msg: message}
+	case codes.AlreadyExists:
+		return &rerrors.ConflictError{Msg: message}
+	case codes.NotFound:
+		return &rerrors.NotFoundError{Msg: message}
+	case codes.PermissionDenied:
+		return &rerrors.ForbiddenError{Msg: message}
+	case codes.Unauthenticated:
+		return &rerrors.UnauthorizedError{Msg: message}
+	case codes.Unknown:
+		// Mapear errores de base de datos específicos
+		if strings.Contains(message, "duplicate key value violates unique constraint") {
+			if strings.Contains(message, "dni_key") || strings.Contains(message, "email_key") {
+				return &rerrors.ConflictError{Msg: "resource already exists"}
+			}
+		}
+		return &rerrors.InternalServerError{Msg: "internal server error"}
+	default:
+		return &rerrors.InternalServerError{Msg: "internal server error"}
+	}
 }
 
 // GetPerson obtiene una persona por ID via gRPC
