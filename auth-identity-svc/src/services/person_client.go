@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/rem-gestion/api-suite/auth-identity/src/dto"
-	rcgrpc "github.com/rem-gestion/rem-common/grpc"
 	rerrors "github.com/rem-gestion/rem-common/errors"
+	rcgrpc "github.com/rem-gestion/rem-common/grpc"
 	personpb "github.com/rem-gestion/rem-common/protos/person/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

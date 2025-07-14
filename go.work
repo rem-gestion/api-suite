@@ -4,5 +4,6 @@ use (
 	./address-svc
 	./auth-identity-svc
 	./person-svc
+	./organization-svc
 	./rem-common
 )

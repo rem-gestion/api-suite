@@ -78,20 +78,20 @@ func (s *PersonService) createRemoteAddress(ctx context.Context, a *dto.AddressP
 		st, _ := status.FromError(err)
 		return nil, &rerrors.InternalServerError{Msg: "address-svc: " + st.Message()}
 	}
-	
+
 	// Validar que el ID devuelto sea un UUID válido
 	if res.Address == nil || res.Address.Id == "" {
 		return nil, &rerrors.InternalServerError{Msg: "address service returned empty ID"}
 	}
-	
+
 	// Log para debug
 	log.Printf("DEBUG: Address service returned ID: '%s' (length: %d)", res.Address.Id, len(res.Address.Id))
-	
+
 	id, err := uuid.Parse(res.Address.Id)
 	if err != nil {
 		return nil, &rerrors.InternalServerError{Msg: fmt.Sprintf("address service returned invalid UUID: %s", res.Address.Id)}
 	}
-	
+
 	return &id, nil
 }
 
