@@ -77,15 +77,6 @@ graph TB
 
     PGCRYPTO --> UUID_FN
     UUID_FN --> TS_UTC
-    
-    style PGCRYPTO fill:#e1f5fe
-    style UUID fill:#f3e5f5
-    style TIMESTAMP fill:#f3e5f5
-    style EMAIL fill:#e8f5e8
-    style DOMAIN fill:#e8f5e8
-    style UUIDVAL fill:#e8f5e8
-    style MONTHLY fill:#fff3e0
-    style CLEANUP fill:#fff3e0
 ```
 
 ## 📋 Especificaciones Detalladas
