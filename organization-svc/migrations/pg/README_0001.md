@@ -16,67 +16,67 @@ La migración `0001_create_enums_and_types.up.sql` establece los tipos de datos 
 ```mermaid
 graph TB
     subgraph "Extensiones PostgreSQL"
-        PGCRYPTO[pgcrypto]
+        PGCRYPTO["pgcrypto"]
     end
-    
+
     subgraph "Funciones Utilitarias"
-        UUID[generate_uuid()]
-        TIMESTAMP[current_timestamp_utc()]
-        EMAIL[is_valid_email()]
-        DOMAIN[is_valid_domain()]
-        UUIDVAL[is_valid_uuid()]
+        UUID_FN["generate_uuid()"]
+        TS_UTC["current_timestamp_utc()"]
+        EMAIL_FN["is_valid_email()"]
+        DOMAIN_FN["is_valid_domain()"]
+        UUIDVAL_FN["is_valid_uuid()"]
     end
-    
+
     subgraph "ENUMs de Organización"
-        ORG_STATUS[organization_status_enum]
-        OWNER_TYPE[owner_type_enum]
+        ORG_STATUS["organization_status_enum"]
+        OWNER_TYPE["owner_type_enum"]
     end
-    
+
     subgraph "ENUMs de Empleados"
-        EMP_STATUS[employee_status_enum]
+        EMP_STATUS["employee_status_enum"]
     end
-    
+
     subgraph "ENUMs de Invitaciones"
-        INV_STATUS[invitation_status_enum]
-        INV_LOG[invitation_log_action_enum]
+        INV_STATUS["invitation_status_enum"]
+        INV_LOG["invitation_log_action_enum"]
     end
-    
+
     subgraph "ENUMs de Integraciones"
-        INT_CAT[integration_category_enum]
-        INT_STATUS[integration_status_enum]
-        SYNC_STATUS[sync_status_enum]
-        SYNC_FREQ[sync_frequency_enum]
-        INT_EVENT[integration_event_type_enum]
-        INT_EVENT_STATUS[integration_event_status_enum]
-        LOG_LEVEL[log_level_enum]
+        INT_CAT["integration_category_enum"]
+        INT_STATUS["integration_status_enum"]
+        SYNC_STATUS["sync_status_enum"]
+        SYNC_FREQ["sync_frequency_enum"]
+        INT_EVENT["integration_event_type_enum"]
+        INT_EVENT_STATUS["integration_event_status_enum"]
+        LOG_LEVEL["log_level_enum"]
     end
-    
+
     subgraph "ENUMs de Dominios"
-        DOM_TYPE[domain_type_enum]
-        DOM_STATUS[domain_status_enum]
-        DNS_METHOD[dns_verification_method_enum]
-        DNS_RECORD[dns_record_type_enum]
-        DOM_VERIF[domain_verification_type_enum]
-        VERIF_STATUS[verification_status_enum]
+        DOM_TYPE["domain_type_enum"]
+        DOM_STATUS["domain_status_enum"]
+        DNS_METHOD["dns_verification_method_enum"]
+        DNS_RECORD["dns_record_type_enum"]
+        DOM_VERIF["domain_verification_type_enum"]
+        VERIF_STATUS["verification_status_enum"]
     end
-    
+
     subgraph "ENUMs de Suscripción"
-        PLAN_TYPE[plan_type_enum]
-        BILLING_INT[billing_interval_enum]
-        CURRENCY[currency_enum]
-        SUB_STATUS[subscription_status_enum]
-        INV_STATUS_BILLING[invoice_status_enum]
-        USAGE_METRIC[usage_metric_enum]
-        AGG_TYPE[aggregation_type_enum]
+        PLAN_TYPE["plan_type_enum"]
+        BILLING_INT["billing_interval_enum"]
+        CURRENCY["currency_enum"]
+        SUB_STATUS["subscription_status_enum"]
+        INV_STATUS_BILLING["invoice_status_enum"]
+        USAGE_METRIC["usage_metric_enum"]
+        AGG_TYPE["aggregation_type_enum"]
     end
-    
+
     subgraph "Funciones de Particionado"
-        MONTHLY[create_monthly_partition()]
-        CLEANUP[cleanup_old_partitions()]
+        MONTHLY_FN["create_monthly_partition()"]
+        CLEANUP_FN["cleanup_old_partitions()"]
     end
-    
-    PGCRYPTO --> UUID
-    UUID --> TIMESTAMP
+
+    PGCRYPTO --> UUID_FN
+    UUID_FN --> TS_UTC
     
     style PGCRYPTO fill:#e1f5fe
     style UUID fill:#f3e5f5
