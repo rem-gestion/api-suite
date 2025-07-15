@@ -207,75 +207,75 @@ graph TD
 
 ```mermaid
 graph TB
-    subgraph "Servicios Externos"
-        AUTH[auth-identity-svc<br/>👤 Usuarios]
-        ADDRESS[address-svc<br/>📍 Direcciones]
-        PERSON[person-svc<br/>👥 Personas]
-    end
-    
-    subgraph "Funciones Base (0001)"
-        UUID_GEN[generate_uuid()]
-        UTC_TIME[current_timestamp_utc()]
-        VALIDATORS[Validadores Email/Phone]
-        BASE_ENUMS[ENUMs Base]
-    end
-    
-    subgraph "Núcleo (0002)"
-        ORG_TABLE[organization]
-        SETTINGS[organization_settings]
-        OWNERS[organization_owner]
-        TRIGGERS_CORE[Triggers Auditoría]
-    end
-    
-    subgraph "Estructura (0003)"
-        BRANCHES[organization_branch]
-        ROLES[organization_role]
-        PROTECTIONS[Protecciones Principales]
-    end
-    
-    subgraph "RRHH (0004-0005)"
-        EMPLOYEES[organization_employee]
-        INVITATIONS[organization_invitation]
-        WORKFLOWS[Workflows Automáticos]
-    end
-    
-    subgraph "Integraciones (0006-0007)"
-        INTEGRATIONS[organization_integration]
-        DOMAINS[organization_custom_domain]
-        PARTITIONS[Logs Particionados]
-    end
-    
-    subgraph "Optimización (0008)"
-        MAINTENANCE[Mantenimiento Automático]
-        PERFORMANCE[Índices Consolidados]
-        MONITORING[Vistas Materializadas]
-    end
-    
-    AUTH --> ORG_TABLE
-    ADDRESS --> BRANCHES
-    PERSON --> EMPLOYEES
-    
-    BASE_ENUMS --> ORG_TABLE
-    UUID_GEN --> ORG_TABLE
-    UTC_TIME --> TRIGGERS_CORE
-    VALIDATORS --> BRANCHES
-    
-    ORG_TABLE --> SETTINGS
-    ORG_TABLE --> OWNERS
-    ORG_TABLE --> BRANCHES
-    ORG_TABLE --> ROLES
-    
-    BRANCHES --> EMPLOYEES
-    ROLES --> EMPLOYEES
-    ORG_TABLE --> INVITATIONS
-    
-    ORG_TABLE --> INTEGRATIONS
-    ORG_TABLE --> DOMAINS
-    INTEGRATIONS --> PARTITIONS
-    
-    EMPLOYEES --> MAINTENANCE
-    PARTITIONS --> PERFORMANCE
-    DOMAINS --> MONITORING
+  subgraph "Servicios Externos"
+    AUTH["auth-identity-svc\n👤 Usuarios"]
+    ADDRESS["address-svc\n📍 Direcciones"]
+    PERSON["person-svc\n👥 Personas"]
+  end
+
+  subgraph "Funciones Base (0001)"
+    UUID_GEN["generate_uuid()"]
+    UTC_TIME["current_timestamp_utc()"]
+    VALIDATORS["Validadores Email/Phone"]
+    BASE_ENUMS["ENUMs Base"]
+  end
+
+  subgraph "Núcleo (0002)"
+    ORG_TABLE["organization"]
+    SETTINGS["organization_settings"]
+    OWNERS["organization_owner"]
+    TRIGGERS_CORE["Triggers Auditoría"]
+  end
+
+  subgraph "Estructura (0003)"
+    BRANCHES["organization_branch"]
+    ROLES["organization_role"]
+    PROTECTIONS["Protecciones Principales"]
+  end
+
+  subgraph "RRHH (0004-0005)"
+    EMPLOYEES["organization_employee"]
+    INVITATIONS["organization_invitation"]
+    WORKFLOWS["Workflows Automáticos"]
+  end
+
+  subgraph "Integraciones (0006-0007)"
+    INTEGRATIONS["organization_integration"]
+    DOMAINS["organization_custom_domain"]
+    PARTITIONS["Logs Particionados"]
+  end
+
+  subgraph "Optimización (0008)"
+    MAINTENANCE["Mantenimiento Automático"]
+    PERFORMANCE["Índices Consolidados"]
+    MONITORING["Vistas Materializadas"]
+  end
+
+  AUTH --> ORG_TABLE
+  ADDRESS --> BRANCHES
+  PERSON --> EMPLOYEES
+
+  BASE_ENUMS --> ORG_TABLE
+  UUID_GEN --> ORG_TABLE
+  UTC_TIME --> TRIGGERS_CORE
+  VALIDATORS --> BRANCHES
+
+  ORG_TABLE --> SETTINGS
+  ORG_TABLE --> OWNERS
+  ORG_TABLE --> BRANCHES
+  ORG_TABLE --> ROLES
+
+  BRANCHES --> EMPLOYEES
+  ROLES --> EMPLOYEES
+  ORG_TABLE --> INVITATIONS
+
+  ORG_TABLE --> INTEGRATIONS
+  ORG_TABLE --> DOMAINS
+  INTEGRATIONS --> PARTITIONS
+
+  EMPLOYEES --> MAINTENANCE
+  PARTITIONS --> PERFORMANCE
+  DOMAINS --> MONITORING
 ```
 
 ---
