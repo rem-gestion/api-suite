@@ -77,41 +77,36 @@ erDiagram
 
 ```mermaid
 graph TB
-    subgraph "Servicios Externos"
-        AUTH[🔐 auth-identity-svc<br/>users.id]
-        PERSON[👤 person-svc<br/>person.id]
+  subgraph "Servicios Externos"
+    AUTH["🔐 auth-identity-svc\nusers.id"]
+    PERSON["👤 person-svc\nperson.id"]
+  end
+
+  subgraph "Sistema de Empleados"
+    subgraph "Tabla employees"
+      EMP["👨‍💼 Employee Record\n- user_id (AUTH)\n- person_id (PERSON)\n- organization_id\n- primary_role_id\n- status\n- hired_at / fired_at"]
     end
-    
-    subgraph "Sistema de Empleados"
-        subgraph "Tabla employees"
-            EMP[👨‍💼 Employee Record<br/>- user_id (AUTH)<br/>- person_id (PERSON)<br/>- organization_id<br/>- primary_role_id<br/>- status<br/>- hired_at / fired_at]
-        end
-        
-        subgraph "Tabla employee_roles"
-            ROLES[🎭 Role Assignments<br/>- employee_id<br/>- role_id<br/>- is_primary<br/>- created_at<br/>- deleted_at]
-        end
-        
-        subgraph "Roles Disponibles"
-            ADMIN[👑 Admin Role<br/>Protegido: último no eliminable]
-            MANAGER[👔 Manager Role]
-            AGENT[🏠 Agent Role]
-            CUSTOM[⚙️ Custom Roles]
-        end
+
+    subgraph "Tabla employee_roles"
+      ROLES["🎭 Role Assignments\n- employee_id\n- role_id\n- is_primary\n- created_at\n- deleted_at"]
     end
-    
-    AUTH -.->|FK lógica| EMP
-    PERSON -.->|FK lógica| EMP
-    EMP -->|many-to-many| ROLES
-    ROLES --> ADMIN
-    ROLES --> MANAGER
-    ROLES --> AGENT
-    ROLES --> CUSTOM
-    
-    style AUTH fill:#e1f5fe,stroke:#01579b
-    style PERSON fill:#e1f5fe,stroke:#01579b
-    style EMP fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    style ROLES fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
-    style ADMIN fill:#ffebee,stroke:#c62828,stroke-width:3px
+
+    subgraph "Roles Disponibles"
+      ADMIN["👑 Admin Role\nProtegido: último no eliminable"]
+      MANAGER["👔 Manager Role"]
+      AGENT["🏠 Agent Role"]
+      CUSTOM["⚙️ Custom Roles"]
+    end
+  end
+
+  AUTH -.->|FK lógica| EMP
+  PERSON -.->|FK lógica| EMP
+  EMP -->|many-to-many| ROLES
+  ROLES --> ADMIN
+  ROLES --> MANAGER
+  ROLES --> AGENT
+  ROLES --> CUSTOM
+
 ```
 
 ### 🔄 Diagrama de Estados de Empleado
@@ -150,22 +145,17 @@ stateDiagram-v2
 
 ```mermaid
 graph LR
-    subgraph "Empleado: Juan Pérez"
-        PRIMARY[🎯 Rol Primario<br/>Manager<br/>is_primary: true]
-        SECONDARY1[⚙️ Rol Secundario<br/>Agent<br/>is_primary: false]
-        SECONDARY2[⚙️ Rol Secundario<br/>Legal Advisor<br/>is_primary: false]
-    end
-    
-    subgraph "Sincronización"
-        SYNC[🔄 sync_employee_primary_role()<br/>employees.primary_role_id = Manager]
-    end
-    
-    PRIMARY --> SYNC
-    
-    style PRIMARY fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    style SECONDARY1 fill:#f3e5f5,stroke:#6a1b9a
-    style SECONDARY2 fill:#f3e5f5,stroke:#6a1b9a
-    style SYNC fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+  subgraph "Empleado: Juan Pérez"
+    PRIMARY["🎯 Rol Primario\nManager\nis_primary: true"]
+    SECONDARY1["⚙️ Rol Secundario\nAgent\nis_primary: false"]
+    SECONDARY2["⚙️ Rol Secundario\nLegal Advisor\nis_primary: false"]
+  end
+
+  subgraph "Sincronización"
+    SYNC["🔄 sync_employee_primary_role()\nemployees.primary_role_id = Manager"]
+  end
+
+  PRIMARY --> SYNC
 ```
 
 ## 📋 Especificaciones de Tablas
