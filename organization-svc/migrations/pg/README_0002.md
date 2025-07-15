@@ -89,53 +89,48 @@ stateDiagram-v2
 
 ```mermaid
 graph TB
-    subgraph "Core Functions"
-        UTC[update_timestamp_utc()]
-        ORG_UTC[update_organization_updated_at()]
-        PREVENT[prevent_hard_delete_organization()]
-    end
-    
-    subgraph "Business Logic"
-        VALIDATE[validate_ownership_percentages()]
-        DEFAULTS[create_organization_defaults()]
-        CREATE_SETTINGS[create_default_organization_settings()]
-    end
-    
-    subgraph "Triggers"
-        TRG_ORG_UTC[trg_organization_updated_at]
-        TRG_SET_UTC[trg_organization_settings_updated_at]
-        TRG_OWN_UTC[trg_organization_owner_updated_at]
-        TRG_PREVENT[trg_organization_prevent_hard_delete]
-        TRG_VALIDATE[trg_organization_owner_validate_percentages]
-        TRG_DEFAULTS[trg_organization_create_defaults]
-    end
-    
-    subgraph "Tables"
-        ORG_TABLE[organization]
-        SET_TABLE[organization_settings]
-        OWN_TABLE[organization_owner]
-    end
-    
-    UTC --> TRG_ORG_UTC
-    UTC --> TRG_SET_UTC
-    UTC --> TRG_OWN_UTC
-    ORG_UTC --> UTC
-    PREVENT --> TRG_PREVENT
-    VALIDATE --> TRG_VALIDATE
-    DEFAULTS --> TRG_DEFAULTS
-    CREATE_SETTINGS --> DEFAULTS
-    
-    TRG_ORG_UTC --> ORG_TABLE
-    TRG_SET_UTC --> SET_TABLE
-    TRG_OWN_UTC --> OWN_TABLE
-    TRG_PREVENT --> ORG_TABLE
-    TRG_VALIDATE --> OWN_TABLE
-    TRG_DEFAULTS --> ORG_TABLE
-    
-    style UTC fill:#e1f5fe
-    style VALIDATE fill:#e8f5e8
-    style PREVENT fill:#fff3e0
-    style DEFAULTS fill:#f3e5f5
+  subgraph "Core Functions"
+    UTC_FN["update_timestamp_utc()"]
+    ORG_UTC_FN["update_organization_updated_at()"]
+    PREVENT_FN["prevent_hard_delete_organization()"]
+  end
+
+  subgraph "Business Logic"
+    VALIDATE_FN["validate_ownership_percentages()"]
+    DEFAULTS_FN["create_organization_defaults()"]
+    CREATE_SETTINGS_FN["create_default_organization_settings()"]
+  end
+
+  subgraph "Triggers"
+    TRG_ORG_UTC["trg_organization_updated_at"]
+    TRG_SET_UTC["trg_organization_settings_updated_at"]
+    TRG_OWN_UTC["trg_organization_owner_updated_at"]
+    TRG_PREVENT["trg_organization_prevent_hard_delete"]
+    TRG_VALIDATE["trg_organization_owner_validate_percentages"]
+    TRG_DEFAULTS["trg_organization_create_defaults"]
+  end
+
+  subgraph "Tables"
+    ORG_TABLE["organization"]
+    SET_TABLE["organization_settings"]
+    OWN_TABLE["organization_owner"]
+  end
+
+  UTC_FN --> TRG_ORG_UTC
+  UTC_FN --> TRG_SET_UTC
+  UTC_FN --> TRG_OWN_UTC
+  ORG_UTC_FN --> UTC_FN
+  PREVENT_FN --> TRG_PREVENT
+  VALIDATE_FN --> TRG_VALIDATE
+  DEFAULTS_FN --> TRG_DEFAULTS
+  CREATE_SETTINGS_FN --> DEFAULTS_FN
+
+  TRG_ORG_UTC --> ORG_TABLE
+  TRG_SET_UTC --> SET_TABLE
+  TRG_OWN_UTC --> OWN_TABLE
+  TRG_PREVENT --> ORG_TABLE
+  TRG_VALIDATE --> OWN_TABLE
+  TRG_DEFAULTS --> ORG_TABLE
 ```
 
 ## 📋 Especificaciones de Tablas
