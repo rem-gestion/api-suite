@@ -43,13 +43,12 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
--- Aplicar triggers de auto-particionado a todas las tablas de log
+-- Aplicar triggers de auto-particionado solo a tablas particionadas
 DO $$
 DECLARE
     tab TEXT;
 BEGIN
     FOR tab IN SELECT unnest(ARRAY[
-        'organization_invite_log',
         'organization_integration_log',
         'organization_domain_verification_log'
     ]) LOOP
@@ -71,16 +70,10 @@ END;
 $$;
 
 -- =============================================
--- CREAR PARTICIONES PARA TABLAS DE LOGS
+-- CREAR PARTICIONES PARA TABLAS DE LOGS PARTICIONADAS
 -- =============================================
 
--- Crear particiones mensuales para organization_invite_log (próximos 6 meses)
-SELECT create_monthly_partition('organization_invite_log', current_timestamp_utc()::DATE);
-SELECT create_monthly_partition('organization_invite_log', (current_timestamp_utc() + INTERVAL '1 month')::DATE);
-SELECT create_monthly_partition('organization_invite_log', (current_timestamp_utc() + INTERVAL '2 months')::DATE);
-SELECT create_monthly_partition('organization_invite_log', (current_timestamp_utc() + INTERVAL '3 months')::DATE);
-SELECT create_monthly_partition('organization_invite_log', (current_timestamp_utc() + INTERVAL '4 months')::DATE);
-SELECT create_monthly_partition('organization_invite_log', (current_timestamp_utc() + INTERVAL '5 months')::DATE);
+-- Nota: organization_invite_log NO es particionada, por lo que no creamos particiones para ella
 
 -- Crear particiones mensuales para organization_integration_log (próximos 6 meses)
 SELECT create_monthly_partition('organization_integration_log', current_timestamp_utc()::DATE);
@@ -129,7 +122,8 @@ BEGIN
         ELSE cleanup_old_integration_logs(30)
     END INTO cleaned_integration_logs;
     
-    SELECT cleanup_old_partitions('organization_invite_log', 12) INTO cleaned_invite_partitions;
+    -- Solo limpiar particiones para tablas que realmente están particionadas
+    cleaned_invite_partitions := 0; -- organization_invite_log no es particionada
     SELECT cleanup_old_partitions('organization_integration_log', 12) INTO cleaned_integration_partitions;
     SELECT cleanup_old_partitions('organization_domain_verification_log', 12) INTO cleaned_domain_partitions;
     
@@ -278,12 +272,8 @@ COMMENT ON FUNCTION validate_admin_exists_check() IS 'Valida que siempre exista 
 -- =============================================
 SELECT 'Organization service migrations completed successfully' as result;
 
--- organization_subscription table
-DROP INDEX IF EXISTS idx_organization_subscription_organization_id;
-CREATE INDEX IF NOT EXISTS ix_organization_subscription_organization_id ON organization_subscription(organization_id);
-
-DROP INDEX IF EXISTS idx_organization_subscription_status;
-CREATE INDEX IF NOT EXISTS ix_organization_subscription_status_active ON organization_subscription(status) WHERE status IN ('active', 'trialing');
+-- NOTA: organization_subscription table será creada por subscription-billing-svc
+-- Los índices se crearán cuando esa tabla exista
 
 -- =============================================
 -- MEJORAR CONSTRAINTS ÚNICOS CON NOMBRES EXPLÍCITOS
@@ -333,6 +323,22 @@ BEGIN
     DELETE FROM organization_domain_verification_log 
     WHERE created_at < current_timestamp_utc() - INTERVAL '1 day' * days_to_keep
     AND status = 'success'; -- Solo eliminar verificaciones exitosas, conservar errores
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para limpiar logs de invitación antiguos
+CREATE OR REPLACE FUNCTION cleanup_old_invite_logs(days_to_keep INTEGER DEFAULT 180)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    -- Limpiar logs de invitación antiguos, conservando eventos importantes
+    DELETE FROM organization_invite_log 
+    WHERE created_at < current_timestamp_utc() - INTERVAL '1 day' * days_to_keep
+    AND event_type NOT IN ('failed_security_check', 'suspicious_activity'); -- Conservar eventos críticos
     
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
@@ -443,16 +449,15 @@ ALTER TABLE employee_roles ADD CONSTRAINT fk_employee_roles_role
 
 -- =============================================
 -- CREAR VISTA PARA SUBSCRIPTION READ-ONLY (ESQUEMA BÁSICO)
--- NOTA: Vista preparada para extensión futura cuando billing-svc defina schema completo
--- IMPORTANTE: Los campos comentados se pueden agregar cuando el billing-svc esté listo
--- En CI puede ser necesario desactivar la vista hasta que el schema sea consistente
--- ESTRATEGIA: Crear vista básica ahora, usar migración específica para ALTER VIEW cuando sea necesario
+-- NOTA: Esta sección se moverá a una migración futura cuando subscription-billing-svc 
+-- defina el schema completo y cree la tabla organization_subscription
+-- TEMPORALMENTE DESHABILITADA hasta que la tabla base exista
 -- =============================================
 
--- Vista que será utilizada para leer datos de suscripción sincronizados desde subscription-billing-svc
--- IMPORTANTE: Solo incluir campos que realmente existen en las tablas actuales
--- Los campos comentados se pueden descomentar cuando el billing-svc defina el schema completo
--- ROBUSTEZ: Esta vista no fallará en entornos donde falten columnas futuras
+-- Vista comentada hasta que subscription-billing-svc implemente las tablas necesarias
+-- TODO: Mover a migración específica cuando billing-svc esté listo
+
+/*
 DO $$
 BEGIN
     -- Verificar que la tabla base existe antes de crear la vista
@@ -464,16 +469,9 @@ BEGIN
                 os.id,
                 os.organization_id,
                 os.status,
-        -- TODO v2.0: Cuando billing-svc implemente subscription_plan y fields adicionales:
-        -- - Descomentar LEFT JOIN subscription_plan
-        -- - Agregar current_period_start, current_period_end 
-        -- - Agregar trial_start, trial_end, cancelled_at
-        -- - Agregar plan_name, plan_display_name, max_users, max_properties, max_storage_gb, features
-        -- - Crear migración dedicada para vista con test de CI que detecte campos faltantes
                 os.created_at,
                 os.updated_at
             FROM organization_subscription os
-            -- LEFT JOIN subscription_plan sp ON os.plan_id = sp.id; -- Descomentar cuando billing-svc esté listo
         $view$;
         
         RAISE NOTICE 'Created organization_subscription_details view with basic schema';
@@ -484,6 +482,9 @@ EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'Warning: Could not create organization_subscription_details view: %', SQLERRM;
 END;
 $$;
+*/
+
+COMMENT ON SCHEMA public IS 'Vista organization_subscription_details pendiente de implementación cuando billing-svc esté listo';
 
 -- =============================================
 -- COMENTARIOS ADICIONALES Y DOCUMENTACIÓN
@@ -495,7 +496,7 @@ COMMENT ON FUNCTION validate_admin_exists_check() IS 'Valida que siempre exista 
 COMMENT ON FUNCTION cleanup_old_invite_logs(INTEGER) IS 'Limpia logs de invitación antiguos, conservando eventos importantes';
 COMMENT ON FUNCTION cleanup_old_integration_logs(INTEGER) IS 'Limpia logs de integración antiguos, conservando errores críticos';
 COMMENT ON FUNCTION ensure_default_integration_types() IS 'Función idempotente para asegurar tipos de integración por defecto';
-COMMENT ON VIEW organization_subscription_details IS 'Vista read-only para detalles de suscripción (esquema básico hasta confirmar campos adicionales)';
+-- NOTA: Vista organization_subscription_details será implementada cuando billing-svc esté listo
 
 -- =============================================
 -- CONFIGURAR TAREAS DE MANTENIMIENTO CRON-READY
@@ -556,33 +557,28 @@ BEGIN
     FROM pg_trigger t 
     JOIN pg_class c ON t.tgrelid = c.oid 
     WHERE t.tgname LIKE '%auto_part%' 
-    AND c.relname IN ('organization_invite_log', 'organization_integration_log', 'organization_domain_verification_log');
+    AND c.relname IN ('organization_integration_log', 'organization_domain_verification_log');
     
-    IF trigger_count < 1 THEN
-        RAISE NOTICE 'WARNING: Expected auto-partitioning triggers, found %', trigger_count;
+    IF trigger_count < 2 THEN
+        RAISE NOTICE 'WARNING: Expected 2 auto-partitioning triggers, found %', trigger_count;
     ELSE
         RAISE NOTICE '✓ Test 1 passed: Auto-partitioning triggers found (% triggers)', trigger_count;
     END IF;
     
     -- Test 2: Verificar función de mantenimiento mejorada (con manejo de errores)
     BEGIN
-        SAVEPOINT test_maintenance;
         SELECT run_maintenance_tasks() INTO maintenance_result;
         IF maintenance_result->>'status' != 'completed' THEN
             RAISE NOTICE 'WARNING: Maintenance function returned status: %', maintenance_result->>'status';
         ELSE
             RAISE NOTICE '✓ Test 2 passed: Maintenance function executed correctly';
         END IF;
-        ROLLBACK TO SAVEPOINT test_maintenance;
     EXCEPTION WHEN OTHERS THEN
-        ROLLBACK TO SAVEPOINT test_maintenance;
         RAISE NOTICE 'WARNING: Maintenance function failed: %', SQLERRM;
     END;
     
-    -- Test 3: Verificar constraint único corregido (con SAVEPOINT para rollback)
+    -- Test 3: Verificar constraint único corregido
     BEGIN
-        SAVEPOINT test_constraint;
-        
         SELECT EXISTS(
             SELECT 1 FROM pg_constraint WHERE conname = 'uq_employees_organization_user'
         ) INTO admin_constraint_exists;
@@ -592,10 +588,7 @@ BEGIN
         ELSE
             RAISE NOTICE '✓ Test 3 passed: Constraint único de employees corregido (user_id en lugar de person_id)';
         END IF;
-        
-        ROLLBACK TO SAVEPOINT test_constraint;
     EXCEPTION WHEN OTHERS THEN
-        ROLLBACK TO SAVEPOINT test_constraint;
         RAISE NOTICE 'WARNING: Test constraint failed: %', SQLERRM;
     END;
     

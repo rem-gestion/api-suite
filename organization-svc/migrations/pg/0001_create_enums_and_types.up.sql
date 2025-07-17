@@ -57,6 +57,7 @@ CREATE TYPE invitation_log_action_enum AS ENUM (
     'rejected',
     'expired',
     'cancelled',
+    'updated',
     'resent'
 );
 
@@ -329,53 +330,60 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- Función para crear particiones por mes (mejorada con soporte para esquemas)
 CREATE OR REPLACE FUNCTION create_monthly_partition(
-    table_name TEXT,
-    partition_date DATE DEFAULT CURRENT_DATE,
-    schema_name TEXT DEFAULT 'public'
+    table_name      TEXT,
+    partition_date  DATE   DEFAULT CURRENT_DATE,
+    schema_name     TEXT   DEFAULT 'public'
 )
 RETURNS VOID AS $$
 DECLARE
-    partition_name TEXT;
-    start_date DATE;
-    end_date DATE;
-    full_table_name TEXT;
-    full_partition_name TEXT;
+    partition_name        TEXT;
+    start_date            DATE;
+    end_date              DATE;
+    idx_name              TEXT;
 BEGIN
     -- Calcular fechas de inicio y fin del mes
     start_date := DATE_TRUNC('month', partition_date)::DATE;
-    end_date := (DATE_TRUNC('month', partition_date) + INTERVAL '1 month')::DATE;
-    
-    -- Nombres completos con esquema
-    full_table_name := schema_name || '.' || table_name;
+    end_date   := (DATE_TRUNC('month', partition_date) + INTERVAL '1 month')::DATE;
+
+    -- Nombre de la partición sin esquema
     partition_name := table_name || '_' || TO_CHAR(partition_date, 'YYYY_MM');
-    full_partition_name := schema_name || '.' || partition_name;
-    
-    -- Crear partición si no existe
-    EXECUTE format('
-        CREATE TABLE IF NOT EXISTS %I PARTITION OF %s
-        FOR VALUES FROM (%L) TO (%L)',
-        full_partition_name, full_table_name, start_date, end_date
+
+    -- 1) Crear partición específica del mes
+    EXECUTE format(
+      'CREATE TABLE IF NOT EXISTS %I.%I PARTITION OF %I.%I
+         FOR VALUES FROM (%L) TO (%L)',
+      schema_name,          -- %I → schema
+      partition_name,       -- %I → partition table
+      schema_name,          -- %I → schema
+      table_name,           -- %I → parent table
+      start_date,           -- %L → literal date
+      end_date              -- %L → literal date
     );
-    
-    -- Crear default partition si no existe (para evitar errores en inserciones fuera de rango)
-    -- IDEMPOTENTE: Solo crear una vez para toda la tabla base
+
+    -- 2) Crear partición DEFAULT (una sola vez)
     BEGIN
-        EXECUTE format('
-            CREATE TABLE %I PARTITION OF %s DEFAULT',
-            schema_name || '.' || table_name || '_default', full_table_name
-        );
+      EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS %I.%I_default PARTITION OF %I.%I DEFAULT',
+        schema_name,
+        table_name,
+        schema_name,
+        table_name
+      );
     EXCEPTION WHEN duplicate_table THEN
-        -- Default partition ya existe, continuar
-        NULL;
+      NULL;
     END;
-    
-    -- Crear índices en la partición
-    EXECUTE format('
-        CREATE INDEX IF NOT EXISTS %I ON %I (created_at)',
-        'idx_' || partition_name || '_created_at', full_partition_name
+
+    -- 3) Índice sobre created_at en la partición recién creada
+    idx_name := 'idx_' || table_name || '_' || TO_CHAR(partition_date, 'YYYY_MM') || '_created_at';
+    EXECUTE format(
+      'CREATE INDEX IF NOT EXISTS %I ON %I.%I (created_at)',
+      idx_name,
+      schema_name,
+      partition_name
     );
 END;
 $$ LANGUAGE plpgsql;
+
 
 -- Función para limpiar particiones antiguas
 CREATE OR REPLACE FUNCTION cleanup_old_partitions(
@@ -463,5 +471,5 @@ COMMENT ON TYPE currency_enum IS 'Monedas soportadas (definido en organization-s
 
 COMMENT ON FUNCTION is_valid_email(TEXT) IS 'Valida formato de email usando regex';
 COMMENT ON FUNCTION is_valid_domain(TEXT) IS 'Valida formato de nombre de dominio (requiere TLD válido)';
-COMMENT ON FUNCTION create_monthly_partition(TEXT, DATE) IS 'Crea particiones mensuales para tablas de logs';
+COMMENT ON FUNCTION create_monthly_partition(TEXT, DATE, TEXT) IS 'Crea particiones mensuales para tablas de logs';
 COMMENT ON FUNCTION cleanup_old_partitions(TEXT, INTEGER) IS 'Elimina particiones antiguas para gestión de espacio';

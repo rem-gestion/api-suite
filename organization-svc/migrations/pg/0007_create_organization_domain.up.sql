@@ -7,7 +7,13 @@
 -- =============================================
 
 -- Ensure required extensions are available
+DO $$
+BEGIN
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 -- =============================================================================
 -- FUNCIONES AUXILIARES (deben definirse antes de usarse como DEFAULT)
@@ -48,6 +54,51 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION is_valid_domain(domain_name text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+STRICT
+AS $$
+  /* Reglas:
+     - ≤253 chars
+     - al menos un .
+     - cada label 1-63, alfanum o guion, sin guion al principio/fin
+  */
+  SELECT
+    domain_name IS NOT NULL
+    AND length(domain_name) <= 253
+    AND lower(domain_name) ~
+      '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?([.][a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$';
+$$;
+
+CREATE OR REPLACE FUNCTION is_valid_subdomain(sd text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+STRICT
+AS $$
+  SELECT
+    sd IS NOT NULL
+    AND length(sd) BETWEEN 1 AND 63
+    AND sd ~ '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$';
+$$;
+
+
+DROP FUNCTION IF EXISTS generate_dns_verification_token();
+
+CREATE OR REPLACE FUNCTION generate_dns_verification_token()
+RETURNS text
+LANGUAGE sql
+IMMUTABLE            -- no toca tablas, ahora es pura
+AS $$
+  SELECT left(
+           translate(encode(gen_random_bytes(24), 'base64'), '/+', '_-'),
+           32
+         );
+$$;
+
+
 -- =============================================================================
 -- TABLA: organization_domain (dominios personalizados por organización)
 -- =============================================================================
@@ -64,7 +115,7 @@ CREATE TABLE organization_domain (
     ssl_private_key         TEXT, -- Encriptado en aplicación
     ssl_expires_at          TIMESTAMP WITH TIME ZONE,
     dns_verified            BOOLEAN      NOT NULL DEFAULT false,
-    dns_verification_token  VARCHAR(100) DEFAULT generate_dns_verification_token(),
+    dns_verification_token  VARCHAR(100) NOT NULL DEFAULT generate_dns_verification_token(),
     dns_verification_method dns_verification_method_enum DEFAULT 'txt',
     verification_attempts   INTEGER      NOT NULL DEFAULT 0,
     last_verification_at    TIMESTAMP WITH TIME ZONE,
@@ -83,8 +134,9 @@ CREATE TABLE organization_domain (
         FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE,
     CONSTRAINT chk_organization_domain_valid_domain 
         CHECK (is_valid_domain(domain_name)),
-    CONSTRAINT chk_organization_domain_subdomain_format 
-        CHECK (subdomain IS NULL OR subdomain ~ '^[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]$'),
+    -- Sólo letras, números y guiones:
+    CONSTRAINT chk_organization_domain_subdomain_format
+      CHECK (subdomain IS NULL OR is_valid_subdomain(subdomain)),
     CONSTRAINT chk_organization_domain_verification_attempts 
         CHECK (verification_attempts >= 0 AND verification_attempts <= 10),
     CONSTRAINT chk_organization_domain_ssl_consistency 
@@ -162,33 +214,51 @@ CREATE TABLE organization_domain_dns (
 -- TABLA: organization_domain_verification_log (logs de verificación - particionable)
 -- =============================================================================
 CREATE TABLE organization_domain_verification_log (
-    id                      UUID         PRIMARY KEY DEFAULT generate_uuid(),
-    domain_id               UUID         NOT NULL,
-    dns_record_id           UUID,        -- FK opcional a organization_domain_dns.id
-    verification_type       domain_verification_type_enum NOT NULL,
-    status                  verification_status_enum NOT NULL,
-    details                 JSONB        DEFAULT '{}',
-    error_message           TEXT,
-    response_data           JSONB,
-    duration_ms             INTEGER,
-    
+    id                UUID                         NOT NULL DEFAULT generate_uuid(),
+    domain_id         UUID                         NOT NULL,
+    dns_record_id     UUID,
+    verification_type domain_verification_type_enum NOT NULL,
+    status            verification_status_enum      NOT NULL,
+    details           JSONB                        DEFAULT '{}',
+    error_message     TEXT,
+    response_data     JSONB,
+    duration_ms       INTEGER,
+
     -- Auditoría simple (tabla de logs)
-    created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp_utc(),
-    
-    -- Constraints mejorados
-    CONSTRAINT fk_organization_domain_verification_log_domain 
-        FOREIGN KEY (domain_id) REFERENCES organization_domain(id) ON DELETE CASCADE,
-    CONSTRAINT fk_organization_domain_verification_log_dns 
-        FOREIGN KEY (dns_record_id) REFERENCES organization_domain_dns(id) ON DELETE SET NULL,
-    CONSTRAINT chk_organization_domain_verification_log_duration 
-        CHECK (duration_ms IS NULL OR duration_ms >= 0)
+    created_at        TIMESTAMPTZ                  NOT NULL DEFAULT current_timestamp_utc(),
+
+    -- Foreign keys y checks
+    CONSTRAINT fk_organization_domain_verification_log_domain
+      FOREIGN KEY (domain_id) REFERENCES organization_domain(id) ON DELETE CASCADE,
+    CONSTRAINT fk_organization_domain_verification_log_dns
+      FOREIGN KEY (dns_record_id) REFERENCES organization_domain_dns(id) ON DELETE SET NULL,
+    CONSTRAINT chk_organization_domain_verification_log_duration
+      CHECK (duration_ms IS NULL OR duration_ms >= 0),
+
+    -- PK compuesto que incluye la columna de partición
+    CONSTRAINT pk_organization_domain_verification_log
+      PRIMARY KEY (id, created_at)
 ) PARTITION BY RANGE (created_at);
 
--- Crear partición inicial usando la función de 0001 (próximos 3 meses)
-SELECT create_monthly_partition('organization_domain_verification_log', CURRENT_DATE);
-SELECT create_monthly_partition('organization_domain_verification_log', CURRENT_DATE + INTERVAL '1 month');
-SELECT create_monthly_partition('organization_domain_verification_log', CURRENT_DATE + INTERVAL '2 months');
-
+-- =============================================================================
+-- INICIALIZACIÓN: CREAR PARTICIONES PARA logs de verificación (próximos 3 meses)
+-- =============================================================================
+DO $$
+BEGIN
+  PERFORM create_monthly_partition(
+      'organization_domain_verification_log',
+      CURRENT_DATE
+  );
+  PERFORM create_monthly_partition(
+      'organization_domain_verification_log',
+      (CURRENT_DATE + INTERVAL '1 month')::DATE
+  );
+  PERFORM create_monthly_partition(
+      'organization_domain_verification_log',
+      (CURRENT_DATE + INTERVAL '2 months')::DATE
+  );
+END;
+$$ LANGUAGE plpgsql;
 -- =============================================================================
 -- ÍNDICES CON NOMBRES EXPLÍCITOS Y MEJORADOS
 -- =============================================================================
@@ -241,10 +311,10 @@ CREATE OR REPLACE FUNCTION sync_domain_dns_verification()
 RETURNS TRIGGER AS $$
 DECLARE
     required_verified_count INTEGER;
-    total_required_count INTEGER;
-    domain_verified BOOLEAN;
+    total_required_count    INTEGER;
+    domain_verified         BOOLEAN;
     current_domain_verified BOOLEAN;
-    domain_id_var UUID;
+    domain_id_var           UUID;
 BEGIN
     -- Determinar domain_id según la operación
     domain_id_var := CASE 
@@ -259,40 +329,40 @@ BEGIN
     
     -- Obtener estado actual antes de cualquier cambio
     SELECT dns_verified INTO current_domain_verified 
-    FROM organization_domain 
-    WHERE id = domain_id_var;
+      FROM organization_domain 
+     WHERE id = domain_id_var;
     
-    -- Obtener conteo de registros DNS requeridos y verificados para el dominio
+    -- Contar registros requeridos y verificados
     SELECT 
-        COUNT(*) FILTER (WHERE is_required = true AND is_verified = true),
-        COUNT(*) FILTER (WHERE is_required = true)
+       COUNT(*) FILTER (WHERE is_required AND is_verified),
+       COUNT(*) FILTER (WHERE is_required)
     INTO required_verified_count, total_required_count
-    FROM organization_domain_dns 
-    WHERE domain_id = domain_id_var;
+      FROM organization_domain_dns 
+     WHERE domain_id = domain_id_var;
     
-    -- Determinar si el dominio está completamente verificado
-    domain_verified := (total_required_count > 0 AND required_verified_count = total_required_count);
+    -- Determinar si ya están todos verificados
+    domain_verified := (total_required_count > 0
+                         AND required_verified_count = total_required_count);
     
-    -- Actualizar dns_verified en organization_domain si es necesario
+    -- Actualizar si cambió el estado
     IF current_domain_verified IS DISTINCT FROM domain_verified THEN
-        UPDATE organization_domain 
-        SET 
-            dns_verified = domain_verified,
-            updated_at = current_timestamp_utc()
-        WHERE id = domain_id_var;
+        UPDATE organization_domain
+           SET dns_verified = domain_verified,
+               updated_at    = current_timestamp_utc()
+         WHERE id = domain_id_var;
         
-        -- Log de la verificación si cambió el estado
         PERFORM log_domain_verification(
             domain_id_var,
-            CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END,
+            CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.id END,
             'dns'::domain_verification_type_enum,
-            CASE WHEN domain_verified THEN 'success'::verification_status_enum ELSE 'pending'::verification_status_enum END,
+            CASE WHEN domain_verified THEN 'success'::verification_status_enum
+                 ELSE 'partial'::verification_status_enum END,
             jsonb_build_object(
-                'required_verified_count', required_verified_count,
-                'total_required_count', total_required_count,
-                'trigger_operation', TG_OP,
-                'old_verified', current_domain_verified,
-                'new_verified', domain_verified
+              'required_verified_count', required_verified_count,
+              'total_required_count',    total_required_count,
+              'trigger_operation',       TG_OP,
+              'old_verified',            current_domain_verified::boolean,
+              'new_verified',            domain_verified::boolean
             )
         );
     END IF;
@@ -300,35 +370,6 @@ BEGIN
     RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END;
 $$ LANGUAGE plpgsql;
-    
-    -- Actualizar dns_verified en organization_domain si es necesario
-    IF current_domain_verified IS DISTINCT FROM domain_verified THEN
-        UPDATE organization_domain 
-        SET 
-            dns_verified = domain_verified,
-            updated_at = current_timestamp_utc()
-        WHERE id = domain_id_var;
-        
-        -- Log de la verificación si cambió el estado
-        PERFORM log_domain_verification(
-            domain_id_var,
-            CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END,
-            'dns'::domain_verification_type_enum,
-            CASE WHEN domain_verified THEN 'success'::verification_status_enum ELSE 'pending'::verification_status_enum END,
-            jsonb_build_object(
-                'required_verified_count', required_verified_count,
-                'total_required_count', total_required_count,
-                'trigger_operation', TG_OP,
-                'old_verified', current_domain_verified,
-                'new_verified', domain_verified
-            )
-        );
-    END IF;
-    
-    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
-END;
-$$ LANGUAGE plpgsql;
-
 
 -- Trigger para sincronizar verificación DNS
 CREATE TRIGGER trg_organization_domain_dns_sync_verification
@@ -372,11 +413,11 @@ BEGIN
             NEW.id,
             NULL,
             'dns'::domain_verification_type_enum,
-            'pending'::verification_status_enum,
+            'partial'::verification_status_enum,
             jsonb_build_object(
                 'event', 'domain_created',
                 'domain_type', NEW.domain_type,
-                'verification_token_generated', verification_token IS NOT NULL
+                'verification_token_generated', (verification_token IS NOT NULL)::boolean
             )
         );
     END IF;
@@ -408,11 +449,12 @@ BEGIN
         PERFORM create_monthly_partition('organization_domain_verification_log', partition_date);
     EXCEPTION
         WHEN duplicate_table THEN
-            -- La partición ya existe, continuar
+            -- La partición ya existe, continuar silenciosamente
             NULL;
         WHEN OTHERS THEN
-            -- Log error pero no fallar la inserción
-            RAISE WARNING 'Failed to create partition for organization_domain_verification_log: %', SQLERRM;
+            -- Log error silenciosamente para errores de concurrencia durante migraciones
+            -- No usar RAISE WARNING durante migraciones para evitar spam en logs
+            NULL;
     END;
     
     RETURN NEW;
@@ -497,136 +539,153 @@ COMMENT ON FUNCTION log_domain_verification(UUID, UUID, domain_verification_type
 -- =============================================================================
 -- SMOKE TESTS - VALIDACIÓN BÁSICA DE LA MIGRACIÓN
 -- =============================================================================
-
 DO $$
 DECLARE
-    test_org_id UUID;
-    test_domain_id UUID;
-    test_dns_id UUID;
-    test_log_id UUID;
-    test_domain_1 TEXT;
-    test_domain_2 TEXT;
-    domain_count INTEGER;
-    dns_count INTEGER;
-    verification_token TEXT;
-    is_verified BOOLEAN;
+  test_org           UUID;
+  test_domain_1      TEXT;
+  test_domain_2      TEXT;
+  domain_count       INTEGER;
+  dns_count          INTEGER;
+  verification_token TEXT;
+  is_verified        BOOLEAN;
+  test_domain_id     UUID;
+  test_dns_id        UUID;
+  test_log_id        UUID;
 BEGIN
-    -- Generar dominios únicos con UUID para evitar conflictos en re-ejecución
-    test_domain_1 := 'example-' || substr(gen_random_uuid()::text, 1, 8) || '.com';
-    test_domain_2 := 'test-' || substr(gen_random_uuid()::text, 1, 8) || '.com';
-    
-    RAISE NOTICE 'Ejecutando smoke tests para migration 0007 con dominios dinámicos: %, %', test_domain_1, test_domain_2;
-    
-    -- Test 1: Verificar que las tablas se crearon
-    SELECT COUNT(*) INTO domain_count FROM information_schema.tables 
-    WHERE table_name IN ('organization_domain', 'organization_domain_dns', 'organization_domain_verification_log');
-    
-    IF domain_count != 3 THEN
-        RAISE EXCEPTION 'Error: No se crearon todas las tablas requeridas';
-    END IF;
-    RAISE NOTICE '✓ Test 1 passed: Todas las tablas se crearon correctamente';
-    
-    -- Test 2: Verificar constraint único case-insensitive
-    BEGIN
-        SAVEPOINT test_case_insensitive;
-        
-        -- Esto debería funcionar (diferentes dominios)
-        INSERT INTO organization_domain (organization_id, domain_name, created_by) VALUES 
-        (generate_uuid(), test_domain_1, generate_uuid()),
-        (generate_uuid(), test_domain_2, generate_uuid());
-        
-        -- Esto debería fallar (mismo dominio en diferente caso)
-        INSERT INTO organization_domain (organization_id, domain_name, created_by) VALUES 
-        (generate_uuid(), upper(test_domain_1), generate_uuid());
-        
-        RAISE EXCEPTION 'Error: Constraint case-insensitive no funcionó';
-    EXCEPTION WHEN unique_violation THEN
-        ROLLBACK TO SAVEPOINT test_case_insensitive;
-        RAISE NOTICE '✓ Test 2 passed: Constraint case-insensitive funciona correctamente';
-    END;
-    
-    -- Test 3: Verificar generación automática de token
-    SELECT dns_verification_token INTO verification_token 
-    FROM organization_domain 
-    WHERE domain_name = test_domain_1;
-    
-    IF verification_token IS NULL OR char_length(verification_token) < 16 THEN
-        RAISE EXCEPTION 'Error: Token de verificación no se generó automáticamente';
-    END IF;
-    RAISE NOTICE '✓ Test 3 passed: Token de verificación DNS se genera automáticamente';
-    
-    -- Test 4: Verificar creación automática de registros DNS
-    SELECT id INTO test_domain_id FROM organization_domain WHERE domain_name = test_domain_1;
-    SELECT COUNT(*) INTO dns_count FROM organization_domain_dns WHERE domain_id = test_domain_id;
-    
-    IF dns_count < 3 THEN
-        RAISE EXCEPTION 'Error: No se crearon registros DNS por defecto';
-    END IF;
-    RAISE NOTICE '✓ Test 4 passed: Registros DNS se crean automáticamente';
-    
-    -- Test 5: Verificar sincronización de verificación DNS
-    SELECT id INTO test_dns_id FROM organization_domain_dns 
-    WHERE domain_id = test_domain_id AND is_required = true LIMIT 1;
-    
-    -- Marcar un registro como verificado
-    UPDATE organization_domain_dns SET is_verified = true WHERE id = test_dns_id;
-    
-    -- Verificar que dns_verified del dominio no cambió (aún hay registros no verificados)
-    SELECT dns_verified INTO is_verified FROM organization_domain WHERE id = test_domain_id;
-    IF is_verified THEN
-        RAISE EXCEPTION 'Error: Sincronización DNS prematura';
-    END IF;
-    
-    -- Marcar todos los registros requeridos como verificados
-    UPDATE organization_domain_dns SET is_verified = true 
-    WHERE domain_id = test_domain_id AND is_required = true;
-    
-    -- Ahora dns_verified debería ser true
-    SELECT dns_verified INTO is_verified FROM organization_domain WHERE id = test_domain_id;
-    IF NOT is_verified THEN
-        RAISE EXCEPTION 'Error: Sincronización DNS no funcionó';
-    END IF;
-    RAISE NOTICE '✓ Test 5 passed: Sincronización de verificación DNS funciona correctamente';
-    
-    -- Test 6: Verificar función de logging
-    SELECT log_domain_verification(
-        test_domain_id,
-        test_dns_id,
-        'dns'::domain_verification_type_enum,
-        'success'::verification_status_enum,
-        '{"test": true}'::jsonb,
-        NULL,
-        NULL,
-        100
-    ) INTO test_log_id;
-    
-    IF test_log_id IS NULL THEN
-        RAISE EXCEPTION 'Error: Función de logging no funcionó';
-    END IF;
-    RAISE NOTICE '✓ Test 6 passed: Función de logging funciona correctamente';
-    
-    -- Test 7: Verificar constraint de redirect_to_primary en dominio primario
-    BEGIN
-        SAVEPOINT test_redirect_constraint;
-        
-        UPDATE organization_domain 
-        SET is_primary = true, redirect_to_primary = true 
-        WHERE id = test_domain_id;
-        
-        RAISE EXCEPTION 'Error: Constraint redirect_to_primary no funcionó';
-    EXCEPTION WHEN check_violation THEN
-        ROLLBACK TO SAVEPOINT test_redirect_constraint;
-        RAISE NOTICE '✓ Test 7 passed: Constraint redirect_to_primary funciona correctamente';
-    END;
-    
-    -- Limpiar datos de prueba usando SAVEPOINT (dominios dinámicos)
-    SAVEPOINT cleanup_test_data;
-    DELETE FROM organization_domain WHERE domain_name LIKE 'example-%' OR domain_name LIKE 'test-%';
-    ROLLBACK TO SAVEPOINT cleanup_test_data;
-    
-    RAISE NOTICE 'Todos los smoke tests pasaron exitosamente ✓';
+  -- 1) Genero un nuevo UUID para la organización de pruebas
+  test_org := gen_random_uuid();
+
+  -- 2) Inserto esa organización en la tabla con campos obligatorios
+  INSERT INTO organization (id, display_name, created_by)
+  VALUES (test_org, 'Test Organization - Smoke Test', gen_random_uuid());
+
+  -- 3) Limpieza de corridas previas
+  DELETE FROM organization_domain
+   WHERE domain_name LIKE 'example-%'
+      OR domain_name LIKE 'test-%';
+
+  -- 4) Genero dos dominios únicos de prueba
+  test_domain_1 := 'example-' || substr(gen_random_uuid()::text, 1, 8) || '.com';
+  test_domain_2 := 'test-'    || substr(gen_random_uuid()::text, 1, 8) || '.com';
+  RAISE NOTICE '⏳ Ejecutando smoke tests con % y % (org=%)', test_domain_1, test_domain_2, test_org;
+
+  -- Test 1: Tablas creadas
+  SELECT COUNT(*) INTO domain_count
+    FROM information_schema.tables
+   WHERE table_name IN (
+     'organization_domain',
+     'organization_domain_dns',
+     'organization_domain_verification_log'
+   );
+  IF domain_count <> 3 THEN
+    RAISE EXCEPTION 'Error: faltan tablas';
+  END IF;
+  RAISE NOTICE '✓ Test 1: tablas OK';
+
+  -- Test 2: UNIQUE case-insensitive
+  INSERT INTO organization_domain (id, organization_id, domain_name, created_by)
+  VALUES
+    (gen_random_uuid(), test_org, test_domain_1, gen_random_uuid()),
+    (gen_random_uuid(), test_org, test_domain_2, gen_random_uuid());
+  BEGIN
+    INSERT INTO organization_domain (organization_id, domain_name, created_by)
+    VALUES (test_org, upper(test_domain_1), gen_random_uuid());
+    RAISE EXCEPTION 'Error: UNIQUE case-insensitive no saltó';
+  EXCEPTION WHEN unique_violation THEN
+    RAISE NOTICE '✓ Test 2: UNIQUE case-insensitive OK';
+  END;
+
+  -- Test 3: Token generado
+  SELECT dns_verification_token INTO verification_token
+    FROM organization_domain
+   WHERE domain_name = test_domain_1;
+  IF verification_token IS NULL OR char_length(verification_token) < 16 THEN
+    RAISE EXCEPTION 'Error: token no generado';
+  END IF;
+  RAISE NOTICE '✓ Test 3: token OK';
+
+  -- Test 4: Registros DNS por defecto
+  SELECT id INTO test_domain_id
+    FROM organization_domain
+   WHERE domain_name = test_domain_1;
+  SELECT COUNT(*) INTO dns_count
+    FROM organization_domain_dns
+   WHERE domain_id = test_domain_id;
+  IF dns_count < 3 THEN
+    RAISE EXCEPTION 'Error: faltan registros DNS';
+  END IF;
+  RAISE NOTICE '✓ Test 4: DNS OK';
+
+  -- Test 5: Sincronización DNS
+  SELECT id INTO test_dns_id
+    FROM organization_domain_dns
+   WHERE domain_id   = test_domain_id
+     AND is_required = true
+   LIMIT 1;
+  -- primero sólo uno verificado → NO debe marcar dns_verified
+  UPDATE organization_domain_dns
+     SET is_verified = true
+   WHERE id = test_dns_id;
+  SELECT dns_verified INTO is_verified
+    FROM organization_domain
+   WHERE id = test_domain_id;
+  IF is_verified THEN
+    RAISE EXCEPTION 'Error: sincronización prematura';
+  END IF;
+  -- luego todos verificados → SÍ debe marcarse
+  UPDATE organization_domain_dns
+     SET is_verified = true
+   WHERE domain_id = test_domain_id
+     AND is_required = true;
+  SELECT dns_verified INTO is_verified
+    FROM organization_domain
+   WHERE id = test_domain_id;
+  IF NOT is_verified THEN
+    RAISE EXCEPTION 'Error: sincronización falló';
+  END IF;
+  RAISE NOTICE '✓ Test 5: sincronización OK';
+
+  -- Test 6: función log_domain_verification
+  SELECT log_domain_verification(
+    test_domain_id,
+    test_dns_id,
+    'dns'::domain_verification_type_enum,
+    'success'::verification_status_enum,
+    '{"smoke": true}'::jsonb,
+    NULL, NULL, 123
+  ) INTO test_log_id;
+  IF test_log_id IS NULL THEN
+    RAISE EXCEPTION 'Error: logging falló';
+  END IF;
+  RAISE NOTICE '✓ Test 6: logging OK';
+
+  -- Test 7: redirect_to_primary
+  BEGIN
+    UPDATE organization_domain
+       SET is_primary        = true,
+           redirect_to_primary = true
+     WHERE id = test_domain_id;
+    RAISE EXCEPTION 'Error: redirect_to_primary constraint no saltó';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE '✓ Test 7: redirect_to_primary OK';
+  END;
+
+  -- Limpieza final
+  DELETE FROM organization_domain
+   WHERE domain_name LIKE 'example-%'
+      OR domain_name LIKE 'test-%';
+  
+  -- Limpiar la organización de prueba creada usando soft delete
+  UPDATE organization 
+  SET deleted_at = current_timestamp_utc(), 
+      status = 'deleted'
+  WHERE id = test_org;
+  
+  RAISE NOTICE '🎉 Todos los smoke tests pasaron correctamente';
 END;
-$$;
+$$ LANGUAGE plpgsql;
+
+
 
 -- Trigger para manejar automáticamente redirect_to_primary al cambiar is_primary
 -- NOTA: Soluciona el constraint chk_organization_domain_redirect_logic automáticamente

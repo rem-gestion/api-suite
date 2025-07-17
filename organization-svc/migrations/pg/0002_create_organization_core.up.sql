@@ -126,7 +126,8 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_organization_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN 
-    RETURN update_timestamp_utc(); 
+    NEW.updated_at = current_timestamp_utc();
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -183,7 +184,7 @@ BEGIN
     
     -- Verificar que el total no exceda 100%
     IF (total_percentage + NEW.ownership_percentage) > 100 THEN
-        RAISE EXCEPTION 'Total ownership percentage cannot exceed 100%%. Current total: %%, trying to add: %%', 
+        RAISE EXCEPTION 'Total ownership percentage cannot exceed 100%%. Current total: %, trying to add: %', 
             total_percentage, NEW.ownership_percentage;
     END IF;
     
@@ -224,15 +225,15 @@ CREATE OR REPLACE FUNCTION create_default_organization_settings(org_id UUID)
 RETURNS VOID AS $$
 BEGIN
     INSERT INTO organization_settings (organization_id, setting_key, setting_value) VALUES
-    (org_id, 'enable_notifications', true::jsonb),
+    (org_id, 'enable_notifications', to_jsonb(true)),
     (org_id, 'timezone', '"UTC"'::jsonb),
     (org_id, 'language', '"es"'::jsonb),
     (org_id, 'currency', '"USD"'::jsonb),
     (org_id, 'date_format', '"dd/mm/yyyy"'::jsonb),
-    (org_id, 'enable_public_listings', true::jsonb),
-    (org_id, 'max_images_per_property', 10::jsonb),
-    (org_id, 'enable_agent_commissions', true::jsonb),
-    (org_id, 'default_commission_percentage', 3.0::jsonb)
+    (org_id, 'enable_public_listings', to_jsonb(true)),
+    (org_id, 'max_images_per_property', to_jsonb(10)),
+    (org_id, 'enable_agent_commissions', to_jsonb(true)),
+    (org_id, 'default_commission_percentage', to_jsonb(3.0))
     ON CONFLICT (organization_id, setting_key) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
