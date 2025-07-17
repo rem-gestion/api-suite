@@ -118,8 +118,12 @@ start "REM Auth Service" cmd /k "cd /d %cd%\auth-identity-svc && echo [AUTH] Ini
 REM Terminal 2: Address Service  
 start "REM Address Service" cmd /k "cd /d %cd%\address-svc && echo [ADDRESS] Iniciando Address Service... && air"
 
+
 REM Terminal 3: Person Service
 start "REM Person Service" cmd /k "cd /d %cd%\person-svc && echo [PERSON] Iniciando Person Service... && air"
+
+REM Terminal 4: Property Service
+start "REM Property Service" cmd /k "cd /d %cd%\property-svc && echo [PROPERTY] Iniciando Property Service... && air"
 
 echo.
 echo ✅ Entorno de desarrollo iniciado exitosamente!

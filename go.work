@@ -3,7 +3,8 @@ go 1.24.4
 use (
 	./address-svc
 	./auth-identity-svc
-	./person-svc
 	./organization-svc
+	./person-svc
+	./property-svc
 	./rem-common
 )

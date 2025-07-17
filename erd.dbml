@@ -1,0 +1,601 @@
+Project "REM Gestión – Core Auth & Billing" {
+  database_type: "PostgreSQL"
+}
+
+/* ─────────────────────────  CATÁLOGOS  ────────────────────────── */
+Table plan {
+  id        serial       [pk]                       // PK autoincremental
+  code      varchar(32)  [unique]                   // pro, team…
+  name      varchar(64)
+  price     numeric(10,2)                           // ARS (0 => “Contactar”)
+  currency  char(3)
+  features  jsonb                                   // para la UI
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  created_by    uuid      //[ref: > users.id]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+/* ─────────────────────────  ADDRESS  ──────────────────────────── */
+Table address {
+  id        uuid          [pk, default: `uuid_generate_v4()`]
+  floor     varchar(16)
+  unit      varchar(16)
+  street    varchar(120)
+  number    int
+  city      varchar(64)
+  state     varchar(64)
+  zip       varchar(16)
+  country   varchar(2)     [note: "ISO-3166-1 alpha-2"]
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+/* ─────────────────────────  PERSON CORE  ─────────────────────── */
+Enum sexo {
+  masculino
+  femenino
+}
+
+Table person {
+  id         uuid        [pk, default: `uuid_generate_v4()`]
+  type       varchar(10) [note: "individual | company"]
+  address_id uuid        [ref: > address.id]
+  avatar_url text
+  sexo        sexo        
+
+  //auditoría
+  created_at timestamp [default: `now()`, not null]
+  updated_at timestamp
+  updated_by uuid      //[ref: > users.id]
+  deleted_at timestamp
+}
+
+/* ------- Sub-tipo: Individual (PERSONA FISICA)---------------------------------- */
+Table individual {
+  person_id  uuid [pk, ref: > person.id]
+  first_name varchar(64)
+  last_name  varchar(64)
+  dni        char(8) [unique]
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+/* ------- Sub-tipo: Company (PERSONA JURIDA)------------------------------------- */
+Table company {
+  person_id   uuid [pk, ref: > person.id]
+  legal_name  varchar(120)
+  cuit        char(11)    [unique]
+  society_type varchar(12) [note: "SA | SRL | SAS | …"]
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+/* ─────────────────────────  ORGANIZATION  ────────────────────── */
+Table organization {
+  id                uuid   [pk, default: `generate_uuid()`]
+  display_name      varchar(120)
+  logo_url          text
+  fiscal_address_id uuid   [ref: > address.id]
+  matricula         varchar(32)
+  status            organization_status_enum [default: 'active']   // enum: active | suspended | pending_activation | deleted
+
+  created_at  timestamp [default: `now()`, not null]
+  created_by  uuid      //[ref: > users.id]
+  updated_at  timestamp
+  updated_by  uuid      //[ref: > users.id]
+  deleted_at  timestamp
+}
+
+Enum owner_type {
+  individual
+  company
+}
+
+Table organization_owner {
+  id                     uuid [pk, default: `generate_uuid()`]
+  owner_type             owner_type_enum  [not null]          // individual | company
+  owner_id               uuid  [not null]
+  organization_id        uuid  [ref: > organization.id, not null]
+  ownership_percentage   decimal(5,2) [not null]              // 0-100
+
+  created_at  timestamp [default: `now()`, not null]
+  created_by  uuid      //[ref: > users.id]
+  updated_at  timestamp
+  updated_by  uuid      //[ref: > users.id]
+  deleted_at  timestamp
+
+  Indexes {
+    (organization_id, owner_type, owner_id) [unique]
+  }
+}
+
+Table organization_settings {
+  organization_id uuid        [pk, ref: > organization.id]
+  setting_key     varchar(64) [pk]
+  setting_value   jsonb
+  created_at      timestamp   [default: `now()`, not null]
+  updated_at      timestamp   [default: `now()`, not null]
+  updated_by      uuid        //[ref: > users.id]
+}
+
+Table organization_branch {
+  id                uuid          [pk, default: `uuid_generate_v4()`]
+  organization_id   uuid          [ref: > organization.id, not null]
+  display_name      varchar(120)
+  address_id        uuid          [ref: > address.id]
+  phone             varchar(32)
+  email             varchar(160)
+  is_main           boolean       [default: false]
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  created_by    uuid      //[ref: > users.id]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id]
+  deleted_at    timestamp
+
+  Indexes {
+    (organization_id)
+  }
+}
+
+Table employees {
+  id                 uuid  [pk, default: `generate_uuid()`]
+  user_id            uuid  [ref: > users.id, not null]
+  person_id          uuid  [ref: > person.id]
+  organization_id    uuid  [ref: > organization.id, not null]
+  primary_role_id    uuid  [ref: > organization_role.id]
+  status             employee_status_enum [default: 'active']    // active | inactive | suspended | terminated
+  hired_at           date
+  fired_at           date
+
+  created_at  timestamp [default: `now()`, not null]
+  created_by  uuid      //[ref: > users.id]
+  updated_at  timestamp
+  updated_by  uuid      //[ref: > users.id]
+  deleted_at  timestamp
+
+  Indexes {
+    (organization_id, user_id) [unique]
+    (primary_role_id)
+  }
+}
+
+Table organization_role {
+  id              uuid [pk, default: `generate_uuid()`]
+  organization_id uuid [ref: > organization.id, not null]
+  name            varchar(64)
+  description     text
+  is_default      boolean [default: false]
+
+  created_at      timestamp [default: `now()`, not null]
+  created_by      uuid
+  updated_at      timestamp
+  updated_by      uuid
+  deleted_at      timestamp
+
+  Indexes {
+    // en PG es UNIQUE (organization_id, lower(name))
+    (organization_id, name) [unique, note: "case-insensitive UNIQUE en PG"]
+  }
+}
+
+Table employee_roles {
+  employee_id uuid   [ref: > employees.id, not null]
+  role_id     uuid   [ref: > organization_role.id, not null]
+  is_primary  boolean [default: false]
+
+  created_at  timestamp [default: `now()`, not null]
+  created_by  uuid
+
+  Indexes {
+    (employee_id, role_id) [pk]
+    // en PG es UNIQUE (employee_id) WHERE is_primary = true
+    (employee_id, is_primary) [unique, note: "solo un rol primario por empleado"]
+  }
+}
+
+Table organization_invite {
+  id                uuid [pk, default: `generate_uuid()`]
+  organization_id   uuid [ref: > organization.id, not null]
+  inviter_person_id uuid [ref: > person.id, not null]
+  invitee_email     varchar(255) [not null]
+  invitee_person_id uuid [ref: > person.id]
+  role_id           uuid [ref: > organization_role.id]
+  branch_id         uuid [ref: > organization_branch.id]
+  token             varchar(128) [unique, not null]
+  status            invitation_status_enum [default: 'pending']
+  expires_at        timestamp [not null]
+  accepted_at       timestamp
+  rejected_at       timestamp
+  cancelled_at      timestamp
+  metadata          jsonb [default: '{}']
+
+  created_at        timestamp [default: `now()`, not null]
+  created_by        uuid      //[ref: > users.id]
+  updated_at        timestamp [default: `now()`, not null]
+  updated_by        uuid      //[ref: > users.id]
+}
+
+Table organization_integration {
+  id                  uuid [pk, default: `generate_uuid()`]
+  organization_id     uuid [ref: > organization.id, not null]
+  integration_type_id uuid [ref: > integration_type.id, not null]
+  name                varchar(200)
+  description         text
+  status              integration_status_enum [default: 'inactive']
+  configuration       jsonb [default: '{}', not null]
+  credentials         jsonb [default: '{}']
+  last_sync_at        timestamp
+  last_sync_status    sync_status_enum
+  sync_frequency      sync_frequency_enum
+  auto_sync_enabled   boolean [default: false]
+  webhook_url         varchar(500)
+  webhook_secret      varchar(100)
+  oauth_token         jsonb
+  api_usage_count     int [default: 0]
+  api_rate_limit      int
+  is_active           boolean [default: true]
+
+  created_at          timestamp [default: `now()`, not null]
+  created_by          uuid
+  updated_at          timestamp
+  updated_by          uuid
+  deleted_at          timestamp
+
+  Indexes {
+    // en PG es UNIQUE (organization_id, integration_type_id, lower(name))
+    (organization_id, integration_type_id, name) [unique, note: "case-insensitive UNIQUE en PG"]
+    // en PG: (organization_id, status) WHERE deleted_at IS NULL
+    (organization_id, status, deleted_at) [note: "partial idx en PG (deleted_at IS NULL)"]
+  }
+}
+
+Table organization_domain {
+  id                      uuid [pk, default: `generate_uuid()`]
+  organization_id         uuid [ref: > organization.id, not null]
+  domain_name             varchar(255) [not null]
+  subdomain               varchar(100)
+  domain_type             domain_type_enum [default: 'custom']
+  status                  domain_status_enum [default: 'pending']
+  is_primary              boolean [default: false]
+  ssl_enabled             boolean [default: false]
+  ssl_certificate         text
+  ssl_private_key         text
+  ssl_expires_at          timestamp
+  dns_verified            boolean [default: false]
+  dns_verification_token  varchar(100)
+  dns_verification_method dns_verification_method_enum [default: 'txt']
+  verification_attempts   int [default: 0]
+  last_verification_at    timestamp
+  redirect_to_primary     boolean [default: false]
+  custom_headers          jsonb [default: '{}']
+
+  created_at      timestamp [default: `now()`, not null]
+  created_by      uuid
+  updated_at      timestamp
+  updated_by      uuid
+  deleted_at      timestamp
+
+  Indexes {
+    // UNIQUE (organization_id, lower(domain_name))
+    (organization_id, domain_name) [unique, note: "case-insensitive UNIQUE en PG"]
+    (organization_id)
+    // UNIQUE (organization_id) WHERE is_primary = true
+    (organization_id, is_primary) [unique, note: "solo un primary/domain por org"]
+  }
+}
+
+Table integration_type {
+  id                  uuid        [pk, default: `generate_uuid()`]
+  name                varchar(100) [unique, not null]          // snake_case
+  display_name        varchar(200) [not null]
+  description         text
+  category            integration_category_enum [not null]     // accounting | crm | …
+  provider            varchar(100) [not null]                  // Intuit, HubSpot …
+  version             varchar(20)  [default: '1.0']
+  is_active           boolean      [default: true]
+  configuration_schema jsonb
+  webhook_support     boolean      [default: false]
+  oauth_support       boolean      [default: false]
+  api_key_support     boolean      [default: true]
+
+  created_at          timestamp    [default: `now()`, not null]
+  updated_at          timestamp    [default: `now()`, not null]
+  updated_by          uuid         //[ref: > users.id]
+
+  Indexes {
+    (category, is_active)
+  }
+}
+
+Table organization_integration_event {
+  id            uuid  [pk, default: `generate_uuid()`]
+  integration_id uuid  [ref: > organization_integration.id, not null]
+  event_type    integration_event_type_enum [not null]        // sync | webhook | …
+  event_data    jsonb  [default: '{}', not null]
+  status        integration_event_status_enum [default: 'pending']
+  error_message text
+  retry_count   int   [default: 0]
+  max_retries   int   [default: 3]
+  scheduled_at  timestamp
+  processed_at  timestamp
+
+  created_at    timestamp [default: `now()`, not null]
+
+  Indexes {
+    (status, scheduled_at)
+    (integration_id)
+  }
+}
+
+Table organization_integration_log {
+  id            uuid  [pk, default: `generate_uuid()`]
+  integration_id uuid  [ref: > organization_integration.id, not null]
+  event_id      uuid  [ref: > organization_integration_event.id]
+  level         log_level_enum [default: 'info']
+  message       text  [not null]
+  context       jsonb [default: '{}']
+
+  created_at    timestamp [default: `now()`, not null]
+
+  Indexes {
+    (integration_id)
+    (level, created_at)
+  }
+}
+
+Table organization_invite_log {
+  id              uuid [pk, default: `generate_uuid()`]
+  invite_id       uuid [ref: > organization_invite.id, not null]
+  action          invitation_log_action_enum [not null]       // created | sent | …
+  old_status      invitation_status_enum
+  new_status      invitation_status_enum
+  actor_person_id uuid  //[ref: > person.id]
+  actor_type      varchar(20) [note: "user | system | cron"]
+  client_ip       inet
+  user_agent      text
+  notes           text
+  error_details   jsonb
+  created_at      timestamp [default: `now()`, not null]
+
+  Indexes {
+    (invite_id)
+    (action, created_at)
+  }
+}
+
+Table organization_domain_dns {
+  id                  uuid [pk, default: `generate_uuid()`]
+  domain_id           uuid [ref: > organization_domain.id, not null]
+  record_type         dns_record_type_enum [not null]          // A | CNAME | TXT …
+  record_name         varchar(255) [not null]
+  record_value        text   [not null]
+  record_ttl          int    [default: 300]
+  is_required         boolean [default: true]
+  is_verified         boolean [default: false]
+  verification_attempts int   [default: 0]
+  last_verification_at timestamp
+  notes               text
+
+  created_at          timestamp [default: `now()`, not null]
+  updated_at          timestamp [default: `now()`, not null]
+
+  Indexes {
+    (domain_id, record_type, record_name) [unique]
+    (is_verified, last_verification_at)
+  }
+}
+
+Table organization_domain_verification_log {
+  id                uuid [pk, default: `generate_uuid()`]
+  domain_id         uuid [ref: > organization_domain.id, not null]
+  dns_record_id     uuid [ref: > organization_domain_dns.id]
+  verification_type domain_verification_type_enum [not null]   // dns | ssl | …
+  status            verification_status_enum      [not null]   // success | failed …
+  details           jsonb  [default: '{}']
+  error_message     text
+  response_data     jsonb
+  duration_ms       int
+  created_at        timestamp [default: `now()`, not null]
+
+  Indexes {
+    (domain_id)
+    (status)
+  }
+}
+
+
+/* ─────────────────────────  AUTH  ────────────────────────────── */
+Table account {
+  id            uuid [pk, default: `uuid_generate_v4()`]
+  provider      varchar(16)   // email | google
+  email         varchar(160)  [unique]
+  password_hash varchar(255)
+  status        varchar(16)   // pending | active | suspended
+
+  //auditoría
+  created_at    timestamp [default: `now()`, not null]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+/*  ─────────────────────  USERS  ────────────────────── */
+Table users {
+  id              uuid [pk, default: `uuid_generate_v4()`]
+  account_id      uuid [ref: > account.id, unique, not null]    // 1-1 con account
+  person_id       uuid [ref: > person.id]
+  onboard_status  varchar(16)   // new | in_progress | done
+  last_login      timestamp
+
+  //auditoría
+  created_at timestamp [default: `now()`, not null]
+  updated_at timestamp
+  updated_by uuid      //[ref: > users.id]
+  deleted_at timestamp
+}
+
+
+/* ----------------------- CONTACTO ----------------------- */
+Table contacto {
+  id          uuid         [pk, default: `uuid_generate_v4()`]
+  persona_id  uuid         [ref: > person.id, not null]
+  tipo        varchar(16)  [note: "email | phone | whatsapp"]
+  dato        varchar(128)
+  is_primary  boolean      [default: false]
+
+  //auditoría
+  created_at    timestamp [default: `now()`, not null]
+  created_by    uuid      //[ref: > users.id]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+
+  Indexes {
+    (persona_id)                           // idx_persona
+    (persona_id, tipo)                     // idx_persona_tipo
+  }
+}
+
+
+/* ───────────────────────── SUSCRIPCIÓN DE USUARIO ───────────────────────── */
+Table user_subscription {
+  id               uuid      [pk, default: `uuid_generate_v4()`]
+  plan_id          int       [ref: > plan.id, not null]
+  user_id          uuid      [ref: > users.id, not null]
+  status           varchar(12) [not null, note: "active | trial | canceled"]
+  starts_at        date      [not null]
+  renews_at        date      [not null]
+
+  // auditoría
+  created_at       timestamp [default: `now()`, not null]
+  updated_at       timestamp
+  updated_by       uuid      //[ref: > users.id]
+  deleted_at       timestamp [note: "soft-delete timestamp"]
+
+  Indexes {
+    (user_id) [unique, name: "user_subscription_unique", note: "una sola sub por usuario"]
+  }
+}
+
+/* ─────────────────────── SUSCRIPCIÓN DE ORGANIZACIÓN ─────────────────────── */
+Table organization_subscription {
+  id                uuid      [pk, default: `uuid_generate_v4()`]
+  plan_id           int       [ref: > plan.id, not null]
+  organization_id   uuid      [ref: > organization.id, not null]
+  status            varchar(12) [not null, note: "active | trial | canceled"]
+  starts_at         date      [not null]
+  renews_at         date      [not null]
+  current_usage     jsonb
+  limit_snapshot    jsonb
+
+  //  -- auditoría
+  created_at        timestamp [default: `now()`, not null]
+  updated_at        timestamp
+  updated_by        uuid      //[ref: > users.id]
+  deleted_at        timestamp
+}
+
+/* ─────────────────────────  TyC HISTÓRICO  ───────────────────── */
+Table terms_acceptance {
+  id          uuid [pk, default: `uuid_generate_v4()`]
+  user_id     uuid [ref: > users.id]
+  version     varchar(8)
+  accepted_at timestamp [default: `now()`]
+  ip          inet
+  user_agent    text
+  locale        varchar(8)  // es-AR, en-US…
+  source        varchar(12) // web | mobile | api
+  terms_hash    varchar(64)
+
+  //  -- auditoría
+  created_at    timestamp [default: `now()`, not null]
+  updated_at    timestamp
+  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  deleted_at    timestamp   [note: "soft-delete timestamp"]
+}
+
+
+
+/* ---------- MEJORAS 2.0 ------------- */
+
+// Clasificación de los tipos de inmuebles.
+Enum property_type {
+  APARTMENT          // Departamento
+  HOUSE              // Casa
+  COMMERCIAL_SPACE   // Local comercial
+  OFFICE             // Oficina
+  LAND               // Terreno
+  INDUSTRIAL_WAREHOUSE // Nave industrial o galpón
+}
+
+
+
+Table property {
+  
+  Note: 'El activo físico principal. Representa un inmueble con sus características intrínsecas (dirección, superficie, etc.).'
+  id uuid [pk, note: 'Identificador único de la propiedad']
+  owner_person_id uuid [not null, ref: > person.id, note: 'Referencia al propietario legal del inmueble (una persona o empresa)']
+  managing_organization_id uuid [ref: > organization.id, note: 'Inmobiliaria que gestiona la propiedad (opcional)']
+  address_id uuid [unique, not null, ref: > address.id, note: 'Referencia a la dirección física del inmueble']
+  property_type property_type [not null, note: 'Clasificación del inmueble (Casa, Departamento, etc.)']
+  internal_code varchar(50) [note: 'Código o referencia interna de la propiedad para la inmobiliaria']
+  year_built int [note: 'Año de construcción del inmueble']
+  bedrooms int [note: 'Cantidad de dormitorios']
+  bathrooms decimal(3,1) [note: 'Cantidad de baños (ej: 2.5 para 2 baños y 1 toilette)']
+  total_area_sqm decimal(10,2) [note: 'Superficie total en metros cuadrados']
+  covered_area_sqm decimal(10,2) [note: 'Superficie cubierta en metros cuadrados']
+  description text [note: 'Descripción general y permanente de la propiedad y sus características']
+  created_at timestamp [not null, default: `now()`, note: 'Fecha y hora de creación del registro']
+  updated_at timestamp [note: 'Fecha y hora de la última actualización del registro']
+  updated_by uuid [note: 'ID del usuario que realizó la última actualización']
+  deleted_at timestamp [note: 'Fecha y hora de borrado lógico del registro (soft delete)']
+  indexes {
+    owner_person_id
+    managing_organization_id
+    (internal_code, managing_organization_id) [unique]
+  }
+}
+
+
+Table amenity {
+  
+  Note: 'Catálogo maestro de todas las posibles comodidades o características que puede tener una propiedad (ej: Piscina, Gimnasio).'
+  id int [pk, increment, note: 'Identificador único de la comodidad']
+  name varchar(100) [unique, not null, note: 'Nombre de la comodidad (ej: "Aire Acondicionado")']
+  category amenity_category [note: 'Categoría a la que pertenece la comodidad']
+  icon_url text [note: 'URL a un ícono representativo']
+}
+
+Table property_amenities {
+  
+  Note: 'Tabla de unión que establece una relación muchos-a-muchos entre propiedades y sus comodidades.'
+  property_id uuid [not null, ref: > property.id, note: 'Referencia a la propiedad']
+  amenity_id int [not null, ref: > amenity.id, note: 'Referencia a la comodidad']
+  note text [note: 'Nota adicional sobre la comodidad en esta propiedad específica (ej: "Parrilla en balcón")']
+  indexes {
+    (property_id, amenity_id) [pk]
+  }
+}
+
+
+Ref: "users"."last_login" < "users"."person_id"
+message.txt
+24 KB
