@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Business Rules: Global catalog managed by system administrators
 -- =============================================================================
 CREATE TABLE integration_type (
-    id                  UUID         PRIMARY KEY DEFAULT generate_uuid(),
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     name                VARCHAR(100) NOT NULL UNIQUE,
     display_name        VARCHAR(200) NOT NULL,
     description         TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE integration_type (
 -- Business Rules: One integration per type per org, soft delete, comprehensive audit trail
 -- =============================================================================
 CREATE TABLE organization_integration (
-    id                  UUID         PRIMARY KEY DEFAULT generate_uuid(),
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id     UUID         NOT NULL,
     integration_type_id UUID         NOT NULL,
     name                VARCHAR(200) NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE organization_integration (
 -- Business Rules: Events are processed by workers, retries are limited, scheduling supported
 -- =============================================================================
 CREATE TABLE organization_integration_event (
-    id                  UUID         PRIMARY KEY DEFAULT generate_uuid(),
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     integration_id      UUID         NOT NULL,
     event_type          integration_event_type_enum NOT NULL,
     event_data          JSONB        NOT NULL DEFAULT '{}',
@@ -162,28 +162,40 @@ CREATE TABLE organization_integration_event (
 -- Business Rules: Automatic partitioning, retention policies, comprehensive context tracking
 -- =============================================================================
 CREATE TABLE organization_integration_log (
-    id                  UUID         PRIMARY KEY DEFAULT generate_uuid(),
-    integration_id      UUID         NOT NULL,
-    event_id            UUID,        -- FK opcional a organization_integration_event.id
-    level               log_level_enum NOT NULL DEFAULT 'info',
-    message             TEXT         NOT NULL,
-    context             JSONB        DEFAULT '{}',
-    
-    -- Auditoría simple (tabla de logs)
-    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp_utc(),
-    
-    -- Foreign Key Constraints
-    CONSTRAINT fk_organization_integration_log_integration 
-        FOREIGN KEY (integration_id) REFERENCES organization_integration(id) ON DELETE CASCADE,
-    CONSTRAINT fk_organization_integration_log_event 
-        FOREIGN KEY (event_id) REFERENCES organization_integration_event(id) ON DELETE SET NULL,
-    
-    -- Business Logic Constraints
-    CONSTRAINT chk_organization_integration_log_message_length 
+    id            UUID               NOT NULL DEFAULT generate_uuid(),
+    integration_id UUID              NOT NULL,
+    event_id      UUID,
+    level         log_level_enum     NOT NULL DEFAULT 'info',
+    message       TEXT               NOT NULL,
+    context       JSONB              DEFAULT '{}',
+    created_at    TIMESTAMPTZ        NOT NULL DEFAULT current_timestamp_utc(),
+
+    -- Clave primaria compuesta, debe incluir la columna de partición
+    CONSTRAINT pk_organization_integration_log PRIMARY KEY (id, created_at),
+
+    -- FKs
+    CONSTRAINT fk_organization_integration_log_integration
+        FOREIGN KEY (integration_id)
+        REFERENCES organization_integration(id) ON DELETE CASCADE,
+    CONSTRAINT fk_organization_integration_log_event
+        FOREIGN KEY (event_id)
+        REFERENCES organization_integration_event(id) ON DELETE SET NULL,
+
+    -- Checks
+    CONSTRAINT chk_organization_integration_log_message_length
         CHECK (char_length(message) >= 1),
     CONSTRAINT chk_organization_integration_log_context_structure
-        CHECK (context IS NULL OR jsonb_typeof(context) = 'object')
+        CHECK (jsonb_typeof(context) = 'object')
 ) PARTITION BY RANGE (created_at);
+
+-- =============================================================================
+-- INICIALIZACIÓN: CREAR PARTICIÓN INICIAL PARA LOGS
+-- =============================================================================
+DO $$
+BEGIN
+    PERFORM create_monthly_partition('organization_integration_log', CURRENT_DATE);
+END;
+$$ LANGUAGE plpgsql;
 
 -- =============================================================================
 -- ÍNDICES OPTIMIZADOS PARA PERFORMANCE Y WORKERS
@@ -524,12 +536,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- =============================================================================
--- INICIALIZACIÓN: CREAR PARTICIÓN INICIAL PARA LOGS
--- =============================================================================
-
--- Crear partición para el mes/año actual para evitar errores en el primer INSERT
-SELECT create_monthly_partition('organization_integration_log', CURRENT_DATE);
 
 -- =============================================================================
 -- DATOS INICIALES: TIPOS DE INTEGRACIÓN COMUNES
@@ -740,4 +746,8 @@ BEGIN
     RAISE NOTICE 'TEST PASSED: Utility functions working correctly';
 END $$;
 
-RAISE NOTICE 'MIGRATION 0006 COMPLETED SUCCESSFULLY: Organization integration system with comprehensive event tracking and audit trails';
+DO $$
+BEGIN
+  RAISE NOTICE 'MIGRATION 0006 COMPLETED SUCCESSFULLY: Organization integration system with comprehensive event tracking and audit trails';
+END
+$$;

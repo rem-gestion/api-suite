@@ -154,10 +154,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_employee_roles_sync_primary ON employee_roles;
+
 CREATE TRIGGER trg_employee_roles_sync_primary
     AFTER INSERT OR UPDATE OF is_primary OR DELETE ON employee_roles
     FOR EACH ROW
-    WHEN (TG_OP = 'INSERT' OR TG_OP = 'DELETE' OR (TG_OP = 'UPDATE' AND OLD.is_primary IS DISTINCT FROM NEW.is_primary))
     EXECUTE FUNCTION sync_employee_primary_role();
 
 -- Función para validar que no se puede despedir el último admin
