@@ -553,7 +553,6 @@ Table property {
   Note: 'El activo físico principal. Representa un inmueble con sus características intrínsecas (dirección, superficie, etc.).'
   id uuid [pk, note: 'Identificador único de la propiedad']
   owner_person_id uuid [not null, ref: > person.id, note: 'Referencia al propietario legal del inmueble (una persona o empresa)']
-  managing_organization_id uuid [ref: > organization.id, note: 'Inmobiliaria que gestiona la propiedad (opcional)']
   address_id uuid [unique, not null, ref: > address.id, note: 'Referencia a la dirección física del inmueble']
   property_type property_type [not null, note: 'Clasificación del inmueble (Casa, Departamento, etc.)']
   internal_code varchar(50) [note: 'Código o referencia interna de la propiedad para la inmobiliaria']
@@ -569,11 +568,22 @@ Table property {
   deleted_at timestamp [note: 'Fecha y hora de borrado lógico del registro (soft delete)']
   indexes {
     owner_person_id
-    managing_organization_id
-    (internal_code, managing_organization_id) [unique]
+    (internal_code) [unique]
   }
 }
 
+Table property_management {
+  
+  Note: 'El activo físico principal. Representa un inmueble con sus características intrínsecas (dirección, superficie, etc.).'
+  id uuid [pk, note: 'Identificador único de la gestion de propiedad']
+  manager_id  uuid [pk, note: 'Identificador único del gestor de la propiedad. Organization o Person manager']
+  manager_type enum 
+  created_at timestamp [not null, default: `now()`, note: 'Fecha y hora de creación del registro']
+  updated_at timestamp [note: 'Fecha y hora de la última actualización del registro']
+  updated_by uuid [note: 'ID del usuario que realizó la última actualización']
+  deleted_at timestamp [note: 'Fecha y hora de borrado lógico del registro (soft delete)']
+
+}
 
 Table amenity {
   
@@ -588,7 +598,7 @@ Table property_amenities {
   
   Note: 'Tabla de unión que establece una relación muchos-a-muchos entre propiedades y sus comodidades.'
   property_id uuid [not null, ref: > property.id, note: 'Referencia a la propiedad']
-  amenity_id int [not null, ref: > amenity.id, note: 'Referencia a la comodidad']
+  amenity_id jsonb [note: 'Referencia a la comodidad']
   note text [note: 'Nota adicional sobre la comodidad en esta propiedad específica (ej: "Parrilla en balcón")']
   indexes {
     (property_id, amenity_id) [pk]
@@ -597,5 +607,3 @@ Table property_amenities {
 
 
 Ref: "users"."last_login" < "users"."person_id"
-message.txt
-24 KB

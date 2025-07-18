@@ -1,44 +1,41 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
+	"log"
 
 	"github.com/rem-gestion/rem-common/config"
 	"github.com/rem-gestion/rem-common/db"
+	"github.com/rem-gestion/rem-common/logger"
 )
 
 func main() {
+	// Carga las REM_* definidas en .env
 	cfg := config.Load()
-	dbConn, err := db.NewPostgres(cfg.Postgres)
+	lg := logger.New(cfg.Logger, "property-migrate")
+
+	// Conectar a base de datos
+	pgDB, err := db.NewPostgres(cfg.Postgres)
 	if err != nil {
-		panic(err)
+		log.Fatal("postgres connection failed:", err)
 	}
 
-	direction := "up"
-	if len(os.Args) > 1 && (os.Args[1] == "down" || os.Args[1] == "up") {
-		direction = os.Args[1]
-	}
-
-	var sqlFile string
-	if direction == "down" {
-		sqlFile = "property-svc/migrations/pg/0001_initial.down.sql"
-	} else {
-		sqlFile = "property-svc/migrations/pg/0001_initial.up.sql"
-	}
-
-	sqlBytes, err := ioutil.ReadFile(sqlFile)
+	sqlDB, err := pgDB.DB()
 	if err != nil {
-		fmt.Printf("Error leyendo migración %s: %v\n", direction, err)
-		os.Exit(1)
+		log.Fatal("get sql.DB failed:", err)
+	}
+	defer sqlDB.Close()
+
+	// Usar migrador adaptativo que maneja prefijos en dev y tabla de migraciones separada
+	migrator := db.NewAdaptiveMigrator(&cfg, sqlDB, lg)
+
+	// Ejecuta las migraciones de la carpeta correspondiente al driver
+	path := "./migrations/pg" // default Postgres
+	if cfg.DriverRelacional == "mysql" {
+		path = "./migrations/mysql"
 	}
 
-	err = dbConn.Exec(string(sqlBytes)).Error
-	if err != nil {
-		fmt.Printf("Error ejecutando migración %s: %v\n", direction, err)
-		os.Exit(1)
+	log.Printf("service=%s environment=%s driver=%s", cfg.ServiceName, cfg.Environment, cfg.DriverRelacional)
+	if err := migrator.RunMigrations(path); err != nil {
+		log.Fatal(err)
 	}
-
-	fmt.Printf("Migración %s ejecutada correctamente.\n", direction)
 }

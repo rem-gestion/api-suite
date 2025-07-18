@@ -65,6 +65,7 @@ echo "🔄 Ejecutando migraciones..."
 run_migrations "auth-identity"
 run_migrations "address"
 run_migrations "person"
+run_migrations "property"
 
 # Preguntar si poblar la base de datos
 echo ""
@@ -73,7 +74,7 @@ echo "📊 POBLACION DE BASE DE DATOS"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 echo "¿Desea poblar la base de datos con datos mock para pruebas?"
-echo "  • Incluye usuarios, personas, direcciones y contactos de ejemplo"
+echo "  • Incluye usuarios, personas, direcciones, propiedades y contactos de ejemplo"
 echo "  • Permite probar inmediatamente las APIs sin crear datos manualmente"
 echo "  • Los datos pueden limpiarse posteriormente con clean.sh"
 echo ""
@@ -127,9 +128,10 @@ echo ""
 echo "🌟 Entorno de desarrollo configurado exitosamente!"
 echo ""
 echo "📋 Servicios disponibles:"
-echo "   🔐 Auth Service:    http://localhost:4002"
-echo "   🏠 Address Service: http://localhost:4000"  
-echo "   👤 Person Service:  http://localhost:4001"
+echo "   🔐 Auth Service:     http://localhost:4002"
+echo "   🏠 Address Service:  http://localhost:4000"  
+echo "   👤 Person Service:   http://localhost:4001"
+echo "   🏢 Property Service: http://localhost:4004"
 echo ""
 echo "🗄️  Base de datos: postgresql://user:supersecreta@localhost:5432/rem_development"
 echo ""
@@ -153,6 +155,9 @@ if command -v air &> /dev/null; then
         tmux new-window -t rem-dev -c "$PWD/person-svc"
         tmux send-keys -t rem-dev "air" Enter
         
+        tmux new-window -t rem-dev -c "$PWD/property-svc"
+        tmux send-keys -t rem-dev "air" Enter
+        
         # Volver a la primera ventana
         tmux select-window -t rem-dev:0
         
@@ -169,6 +174,7 @@ if command -v air &> /dev/null; then
         echo "   Terminal 1: cd auth-identity-svc && air"
         echo "   Terminal 2: cd address-svc && air"
         echo "   Terminal 3: cd person-svc && air"
+        echo "   Terminal 4: cd property-svc && air"
     fi
 else
     echo "⚠️  Air no está instalado. Instálalo con: go install github.com/cosmtrek/air@latest"
@@ -177,4 +183,5 @@ else
     echo "   Terminal 1: cd auth-identity-svc && go run ./cmd/api"
     echo "   Terminal 2: cd address-svc && go run ./cmd/api"
     echo "   Terminal 3: cd person-svc && go run ./cmd/api"
+    echo "   Terminal 4: cd property-svc && go run ./cmd/api"
 fi

@@ -1,0 +1,200 @@
+// property.proto - Definición de servicios gRPC para Property Service
+// Este archivo será convertido a .proto real cuando implementemos gRPC completo
+
+syntax = "proto3";
+
+package property.v1;
+
+option go_package = "github.com/rem-gestion/rem-common/protos/property/v1;propertypb";
+
+import "google/protobuf/timestamp.proto";
+
+// Property Service - Gestión de propiedades inmobiliarias
+service PropertyService {
+  // CRUD de propiedades
+  rpc CreateProperty(CreatePropertyRequest) returns (PropertyResponse);
+  rpc GetProperty(GetPropertyRequest) returns (PropertyResponse);
+  rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse);
+  rpc UpdateProperty(UpdatePropertyRequest) returns (PropertyResponse);
+  rpc DeleteProperty(DeletePropertyRequest) returns (google.protobuf.Empty);
+  
+  // Gestión de amenities
+  rpc CreateAmenity(CreateAmenityRequest) returns (AmenityResponse);
+  rpc GetAmenity(GetAmenityRequest) returns (AmenityResponse);
+  rpc ListAmenities(ListAmenitiesRequest) returns (ListAmenitiesResponse);
+  rpc UpdateAmenity(UpdateAmenityRequest) returns (AmenityResponse);
+  rpc DeleteAmenity(DeleteAmenityRequest) returns (google.protobuf.Empty);
+  
+  // Relaciones Property-Amenity
+  rpc AddAmenityToProperty(AddAmenityToPropertyRequest) returns (google.protobuf.Empty);
+  rpc RemoveAmenityFromProperty(RemoveAmenityFromPropertyRequest) returns (google.protobuf.Empty);
+  rpc GetPropertyAmenities(GetPropertyAmenitiesRequest) returns (ListAmenitiesResponse);
+  
+  // Validaciones (para otros servicios)
+  rpc ValidatePropertyExists(ValidatePropertyExistsRequest) returns (ValidatePropertyExistsResponse);
+}
+
+enum PropertyType {
+  PROPERTY_TYPE_UNSPECIFIED = 0;
+  PROPERTY_TYPE_APARTMENT = 1;
+  PROPERTY_TYPE_HOUSE = 2;
+  PROPERTY_TYPE_COMMERCIAL_SPACE = 3;
+  PROPERTY_TYPE_OFFICE = 4;
+  PROPERTY_TYPE_LAND = 5;
+  PROPERTY_TYPE_INDUSTRIAL_WAREHOUSE = 6;
+}
+
+message Property {
+  string id = 1;
+  string owner_person_id = 2;
+  string address_id = 3;
+  PropertyType property_type = 4;
+  optional string internal_code = 5;
+  optional int32 year_built = 6;
+  optional int32 bedrooms = 7;
+  optional float bathrooms = 8;
+  optional double total_area_sqm = 9;
+  optional double covered_area_sqm = 10;
+  optional string description = 11;
+  google.protobuf.Timestamp created_at = 12;
+  optional google.protobuf.Timestamp updated_at = 13;
+  repeated PropertyManagement management = 14;
+  repeated Amenity amenities = 15;
+}
+
+message PropertyManagement {
+  string id = 1;
+  string property_id = 2;
+  string organization_id = 3;
+  google.protobuf.Timestamp managed_since = 4;
+  optional google.protobuf.Timestamp managed_until = 5;
+  bool is_active = 6;
+  optional double commission_percent = 7;
+  optional string notes = 8;
+  google.protobuf.Timestamp created_at = 9;
+  optional google.protobuf.Timestamp updated_at = 10;
+}
+
+message Amenity {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional string icon = 4;
+  optional string category = 5;
+  google.protobuf.Timestamp created_at = 6;
+  optional google.protobuf.Timestamp updated_at = 7;
+}
+
+// Request/Response messages
+message CreatePropertyRequest {
+  string owner_person_id = 1;
+  string address_id = 2;
+  PropertyType property_type = 3;
+  optional string internal_code = 4;
+  optional int32 year_built = 5;
+  optional int32 bedrooms = 6;
+  optional float bathrooms = 7;
+  optional double total_area_sqm = 8;
+  optional double covered_area_sqm = 9;
+  optional string description = 10;
+  repeated string amenity_ids = 11;
+}
+
+message GetPropertyRequest {
+  string id = 1;
+}
+
+message ListPropertiesRequest {
+  optional string search = 1;
+  optional PropertyType property_type = 2;
+  optional string owner_person_id = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListPropertiesResponse {
+  repeated Property properties = 1;
+  int64 total = 2;
+}
+
+message UpdatePropertyRequest {
+  string id = 1;
+  optional PropertyType property_type = 2;
+  optional string internal_code = 3;
+  optional int32 year_built = 4;
+  optional int32 bedrooms = 5;
+  optional float bathrooms = 6;
+  optional double total_area_sqm = 7;
+  optional double covered_area_sqm = 8;
+  optional string description = 9;
+}
+
+message DeletePropertyRequest {
+  string id = 1;
+}
+
+message PropertyResponse {
+  Property property = 1;
+}
+
+message CreateAmenityRequest {
+  string name = 1;
+  optional string description = 2;
+  optional string icon = 3;
+  optional string category = 4;
+}
+
+message GetAmenityRequest {
+  string id = 1;
+}
+
+message ListAmenitiesRequest {
+  optional string search = 1;
+  optional string category = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListAmenitiesResponse {
+  repeated Amenity amenities = 1;
+  int64 total = 2;
+}
+
+message UpdateAmenityRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string icon = 4;
+  optional string category = 5;
+}
+
+message DeleteAmenityRequest {
+  string id = 1;
+}
+
+message AmenityResponse {
+  Amenity amenity = 1;
+}
+
+message AddAmenityToPropertyRequest {
+  string property_id = 1;
+  string amenity_id = 2;
+}
+
+message RemoveAmenityFromPropertyRequest {
+  string property_id = 1;
+  string amenity_id = 2;
+}
+
+message GetPropertyAmenitiesRequest {
+  string property_id = 1;
+}
+
+message ValidatePropertyExistsRequest {
+  string property_id = 1;
+}
+
+message ValidatePropertyExistsResponse {
+  bool exists = 1;
+  optional Property property = 2;
+}

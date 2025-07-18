@@ -1,6 +1,6 @@
 # 🏢 REM - Real Estate Management Platform
 
-**REM** es una plataforma completa de gestión inmobiliaria construida con arquitectura de microservicios, diseñada para proporcionar una solución escalable, robusta y moderna para la gestión integral de propiedades, personas, contratos y operaciones inmobiliarias.
+**REM** es una plataforma completa de gestión inmobiliaria construida con arquitectura de microservicios, diseñada para proporcionar una solución escalable, robusta y moderna para la gestión integral de propiedades, personas, direcciones, amenities y operaciones inmobiliarias.
 
 ---
 
@@ -29,6 +29,7 @@ REM es una plataforma de gestión inmobiliaria que centraliza:
 
 - **👥 Gestión de Personas**: Individuos y empresas (físicas y jurídicas)
 - **🏠 Gestión de Direcciones**: Sistema centralizado de ubicaciones
+- **🏢 Gestión de Propiedades**: Inmuebles con amenities y características
 - **🔐 Autenticación e Identidad**: Sistema seguro de usuarios y permisos
 - **🌐 API Gateway**: Punto único de entrada para todos los servicios
 - **📊 Base de Datos Compartida**: Arquitectura optimizada para desarrollo
@@ -57,15 +58,21 @@ REM es una plataforma de gestión inmobiliaria que centraliza:
 │                  http://localhost:8081                      │
 └───────────────────────────┬─────────────────────────────────┘
                             │HTTP
-           ┌────────────────┼────────────────┐
-           │                │                │
-      ┌────▼────┐      ┌────▼────┐      ┌────▼────┐
-      │  Auth   │ gRPC │ Person  │ gRPC │Address  │
-      │ Service │<────>│ Service │<────>│Service  │
-      │ :4002   │      │ :4001   │      │ :4000   │
-      └─────────┘      └─────────┘      └─────────┘
-           │                │                │
-           └────────────────┼────────────────┘
+       ┌────────────────────┼────────────────────┐
+       │                    │                    │
+  ┌────▼────┐          ┌────▼────┐          ┌────▼────┐
+  │  Auth   │   gRPC   │ Person  │   gRPC   │Address  │
+  │ Service │ <──────> │ Service │ <──────> │Service  │
+  │ :4002   │          │ :4001   │          │ :4000   │
+  └─────────┘          └─────────┘          └─────────┘
+       │                    │                    │
+       │               ┌────▼────┐               │
+       │               │Property │               │
+       │               │ Service │ <─────────────┤
+       │               │ :4004   │ gRPC          │
+       │               └─────────┘               │
+       │                    │                    │
+       └────────────────────┼────────────────────┘
                             │
                       ┌─────▼─────┐
                       │PostgreSQL │
@@ -124,6 +131,7 @@ curl http://localhost:8081/health
 curl http://localhost:8081/api/health/auth
 curl http://localhost:8081/api/health/person  
 curl http://localhost:8081/api/health/address
+curl http://localhost:8081/api/health/property
 ```
 
 ### 4. **URLs Disponibles**
@@ -132,6 +140,7 @@ curl http://localhost:8081/api/health/address
 - **🔐 Auth Service**: http://localhost:4002
 - **👥 Person Service**: http://localhost:4001  
 - **🏠 Address Service**: http://localhost:4000
+- **🏢 Property Service**: http://localhost:4004
 
 ---
 
@@ -152,6 +161,7 @@ curl http://localhost:8081/api/health/address
 | `4000` | address-svc | Servicio de Direcciones |
 | `4001` | person-svc | Servicio de Personas |
 | `4002` | auth-identity-svc | Servicio de Autenticación |
+| `4004` | property-svc | Servicio de Propiedades |
 | `5432` | PostgreSQL | Base de Datos |
 | `6379` | Redis | Cache (opcional) |
 | `5672` | RabbitMQ | Message Broker (opcional) |
@@ -229,6 +239,7 @@ Cada servicio tiene su propio sistema de migraciones:
 cd auth-identity-svc && go run ./cmd/migrate
 cd person-svc && go run ./cmd/migrate  
 cd address-svc && go run ./cmd/migrate
+cd property-svc && go run ./cmd/migrate
 ```
 
 ### Estructura de Migraciones
@@ -297,6 +308,12 @@ location /api/persons/ {
 location /api/addresses/ {
     proxy_pass http://address_backend/;
 }
+location /api/properties/ {
+    proxy_pass http://property_backend/;
+}
+location /api/amenities/ {
+    proxy_pass http://property_backend/;
+}
 ```
 
 ### Rutas Disponibles
@@ -308,6 +325,8 @@ location /api/addresses/ {
 | `/api/persons/*` | person-svc | Gestión de personas |
 | `/api/contacts/*` | person-svc | Gestión de contactos |
 | `/api/addresses/*` | address-svc | Gestión de direcciones |
+| `/api/properties/*` | property-svc | Gestión de propiedades |
+| `/api/amenities/*` | property-svc | Gestión de amenities |
 | `/health` | nginx | Estado del gateway |
 | `/api/health/*` | servicios | Health checks individuales |
 
@@ -424,6 +443,12 @@ curl http://localhost:4002/login
 - CRUD con datos de direcciones reales de Argentina
 - Validación de campos
 
+#### 🏢 **Properties & Real Estate**
+- CRUD completo de propiedades inmobiliarias
+- Gestión de amenities/comodidades por categorías
+- Relaciones propiedades-amenities
+- Filtros por tipo de propiedad y características
+
 #### 🩺 **Health Checks**
 - Monitoreo de API Gateway y servicios individuales
 
@@ -499,6 +524,41 @@ GET  /addresses/:id # Obtener dirección
 PUT  /addresses/:id # ❌ No permitido (inmutable)
 GET  /health/detailed # Estado del servicio
 ```
+
+### 🏢 Property Service
+
+**Puerto**: 4004 | **[📖 Documentación](./property-svc/README.md)**
+
+**Responsabilidades**:
+- Gestión completa de propiedades inmobiliarias
+- Manejo de amenities/comodidades con categorías
+- Relaciones propiedades-amenities
+- Validación con address-svc y person-svc
+
+**Tipos de propiedad**:
+- APARTMENT, HOUSE, COMMERCIAL_SPACE, OFFICE, LAND, INDUSTRIAL_WAREHOUSE
+
+**Categorías de amenities**:
+- Security, Recreation, Services, Transport, Healthcare, Education
+
+**Endpoints principales**:
+```bash
+GET  /properties              # Listar propiedades
+POST /properties              # Crear propiedad
+GET  /properties/:id          # Obtener propiedad específica
+PUT  /properties/:id          # Actualizar propiedad
+DELETE /properties/:id        # Eliminar propiedad
+GET  /amenities               # Listar amenities
+POST /amenities               # Crear amenity
+POST /manage/:property_id/amenities/:amenity_id  # Asociar amenity
+DELETE /manage/:property_id/amenities/:amenity_id # Desasociar amenity
+```
+
+**Características especiales**:
+- 🏗️ **Códigos internos únicos**: Generación automática de códigos de propiedad
+- 🔗 **Integración externa**: Validación con address-svc y person-svc via gRPC
+- 🎯 **Mock services**: Servicios mock para desarrollo independiente
+- ✨ **Gestión de relaciones**: Sistema flexible de amenities por propiedad
 
 ---
 

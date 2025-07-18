@@ -35,6 +35,10 @@ cd person-svc
 go run ./cmd/migrate
 cd ..
 
+cd property-svc
+go run ./cmd/migrate
+cd ..
+
 REM Preguntar si poblar la base de datos
 echo.
 echo ═══════════════════════════════════════════════════════════════
@@ -42,7 +46,7 @@ echo POBLACION DE BASE DE DATOS
 echo ═══════════════════════════════════════════════════════════════
 echo.
 echo ¿Desea poblar la base de datos con datos mock para pruebas?
-echo   • Incluye usuarios, personas, direcciones y contactos de ejemplo
+echo   • Incluye usuarios, personas, direcciones, propiedades y contactos de ejemplo
 echo   • Permite probar inmediatamente las APIs sin crear datos manualmente
 echo   • Los datos pueden limpiarse posteriormente con clean.bat
 echo.
@@ -97,16 +101,19 @@ REM Iniciar servicios automaticamente
 echo Iniciando servicios automaticamente...
 echo.
 echo 🌐 API Gateway: http://localhost:8081
-echo   ├─ Auth API:    http://localhost:8081/api/auth/
-echo   ├─ Users API:   http://localhost:8081/api/users/
-echo   ├─ Person API:  http://localhost:8081/api/persons/
-echo   ├─ Address API: http://localhost:8081/api/addresses/
-echo   └─ Health:      http://localhost:8081/health
+echo   ├─ Auth API:      http://localhost:8081/api/auth/
+echo   ├─ Users API:     http://localhost:8081/api/users/
+echo   ├─ Person API:    http://localhost:8081/api/persons/
+echo   ├─ Address API:   http://localhost:8081/api/addresses/
+echo   ├─ Property API:  http://localhost:8081/api/properties/
+echo   ├─ Amenities API: http://localhost:8081/api/amenities/
+echo   └─ Health:        http://localhost:8081/health
 echo.
 echo 🔧 Servicios individuales:
-echo   ├─ Auth Service:    http://localhost:4002
-echo   ├─ Address Service: http://localhost:4000  
-echo   └─ Person Service:  http://localhost:4001
+echo   ├─ Auth Service:     http://localhost:4002
+echo   ├─ Address Service:  http://localhost:4000  
+echo   ├─ Person Service:   http://localhost:4001
+echo   └─ Property Service: http://localhost:4004
 echo.
 
 REM Abrir terminales con Air para cada servicio
@@ -134,9 +141,10 @@ echo.
 echo 📋 Ejemplos de uso:
 echo    curl http://localhost:8081/api/persons/
 echo    curl http://localhost:8081/api/addresses/
+echo    curl http://localhost:8081/api/properties/
 echo    curl http://localhost:8081/api/auth/validate
 echo.
-echo 🛠️ Se han abierto 3 terminales con los servicios ejecutandose
+echo 🛠️ Se han abierto 4 terminales con los servicios ejecutandose
 echo Para detener todo, cierra las terminales o usa Ctrl+C en cada una
 echo Para limpiar el entorno, ejecuta: .\scripts\clean.bat
 echo.
