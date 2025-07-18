@@ -16,6 +16,19 @@ func Setup(r *gin.Engine, ctrl *controller.Ctrl) {
 	r.PUT("/:id", ctrl.UpdateProperty)
 	r.DELETE("/:id", ctrl.DeleteProperty)
 
+	// Property Types (master data)
+	r.GET("/property-types", ctrl.GetPropertyTypes)
+
+	// Manager Types (master data)
+	r.GET("/manager-types", ctrl.GetManagerTypes)
+
+	// Property-specific endpoints (use different pattern to avoid conflicts)
+	properties := r.Group("/properties")
+	{
+		// Property-Amenity Relations
+		properties.GET("/:property_id/amenities", ctrl.GetPropertyAmenities)
+	}
+
 	// Property-Amenity management - using /manage prefix to avoid route conflicts
 	manage := r.Group("/manage")
 	{

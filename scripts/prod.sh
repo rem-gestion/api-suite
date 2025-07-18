@@ -5,7 +5,7 @@ set -e
 echo "🏭 Preparando entorno de PRODUCCIÓN REM..."
 
 # Verificar que estamos en el directorio correcto
-if [ ! -d "auth-identity-svc" ] || [ ! -d "address-svc" ] || [ ! -d "person-svc" ]; then
+if [ ! -d "auth-identity-svc" ] || [ ! -d "address-svc" ] || [ ! -d "person-svc" ] || [ ! -d "property-svc" ]; then
     echo "❌ Error: No se encuentran los directorios de servicios"
     echo "   Ejecuta este script desde el directorio services/"
     exit 1
@@ -75,6 +75,7 @@ check_env_vars() {
         "AUTH_API_KEY"
         "ADDRESS_API_KEY" 
         "PERSON_API_KEY"
+        "PROPERTY_API_KEY"
     )
     
     for var in "${required_vars[@]}"; do
@@ -91,6 +92,7 @@ check_env_vars() {
         echo "   export AUTH_API_KEY='tu-clave-auth-secreta'"
         echo "   export ADDRESS_API_KEY='tu-clave-address-secreta'"
         echo "   export PERSON_API_KEY='tu-clave-person-secreta'"
+        echo "   export PROPERTY_API_KEY='tu-clave-property-secreta'"
         return 1
     fi
 }
@@ -108,6 +110,7 @@ echo "🔨 Compilando servicios..."
 build_service "auth-identity"
 build_service "address"
 build_service "person"
+build_service "property"
 
 echo "✅ Todos los servicios compilados"
 
@@ -120,6 +123,7 @@ echo "🔄 Ejecutando migraciones de producción..."
 run_prod_migrations "auth-identity"
 run_prod_migrations "address"
 run_prod_migrations "person"
+run_prod_migrations "property"
 
 echo "✅ Migraciones completadas"
 
@@ -160,14 +164,16 @@ echo "🚀 Iniciando servicios en modo producción..."
 start_service "auth-identity" "8080"
 start_service "address" "4000"
 start_service "person" "4001"
+start_service "property" "4004"
 
 echo ""
 echo "🎉 Entorno de producción iniciado exitosamente!"
 echo ""
 echo "📋 Servicios activos:"
-echo "   🔐 Auth Service:    http://localhost:8080 (PID: $(cat auth-identity-svc/logs/auth-identity.pid))"
-echo "   🏠 Address Service: http://localhost:4000 (PID: $(cat address-svc/logs/address.pid))"
-echo "   👤 Person Service:  http://localhost:4001 (PID: $(cat person-svc/logs/person.pid))"
+echo "   🔐 Auth Service:     http://localhost:8080 (PID: $(cat auth-identity-svc/logs/auth-identity.pid))"
+echo "   🏠 Address Service:  http://localhost:4000 (PID: $(cat address-svc/logs/address.pid))"
+echo "   👤 Person Service:   http://localhost:4001 (PID: $(cat person-svc/logs/person.pid))"
+echo "   🏢 Property Service: http://localhost:4004 (PID: $(cat property-svc/logs/property.pid))"
 echo ""
 echo "📋 Gestión de servicios:"
 echo "   Para ver logs:    tail -f {servicio}-svc/logs/{servicio}.log"
@@ -180,7 +186,7 @@ cat > scripts/stop.sh << 'EOF'
 #!/bin/bash
 echo "🛑 Deteniendo servicios REM..."
 
-for service in auth-identity address person; do
+for service in auth-identity address person property; do
     if [ -f "${service}-svc/logs/${service}.pid" ]; then
         pid=$(cat "${service}-svc/logs/${service}.pid")
         if kill -0 $pid 2>/dev/null; then

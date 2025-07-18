@@ -55,22 +55,30 @@ func (s *PropertyService) validateCreate(in dto.CreatePropertyDTO) error {
 		return &rerrors.NotFoundError{Msg: "owner_person_id no existe"}
 	}
 
-	// Validar property_type
-	validTypes := []string{"APARTMENT", "HOUSE", "COMMERCIAL_SPACE", "OFFICE", "LAND", "INDUSTRIAL_WAREHOUSE"}
-	isValid := false
-	for _, t := range validTypes {
-		if in.PropertyType == t {
-			isValid = true
-			break
-		}
+	// Validar property_type_id - verificar que existe en la tabla property_type
+	exists, err := s.repo.PropertyTypeExists(in.PropertyTypeID)
+	if err != nil {
+		return &rerrors.InternalServerError{Msg: "Error validando property_type_id: " + err.Error()}
 	}
-	if !isValid {
-		return &rerrors.ValidationError{Msg: "property_type debe ser uno de: " + fmt.Sprintf("%v", validTypes)}
+	if !exists {
+		return &rerrors.NotFoundError{Msg: "property_type_id no existe"}
 	}
 
-	// Si se especifica management, validar organization_id
-	if in.Management != nil && !s.mockSvc.ValidateOrganizationExists(in.Management.OrganizationID) {
-		return &rerrors.NotFoundError{Msg: "organization_id en management no existe"}
+	// Si se especifica management, validar manager_id y manager_type_id
+	if in.Management != nil {
+		// Validar manager_type_id
+		managerTypeExists, err := s.repo.ManagerTypeExists(in.Management.ManagerTypeID)
+		if err != nil {
+			return &rerrors.InternalServerError{Msg: "Error validando manager_type_id: " + err.Error()}
+		}
+		if !managerTypeExists {
+			return &rerrors.NotFoundError{Msg: "manager_type_id no existe"}
+		}
+
+		// Validar que el manager existe según su tipo
+		if !s.mockSvc.ValidateManagerExists(in.Management.ManagerID, in.Management.ManagerTypeID) {
+			return &rerrors.NotFoundError{Msg: "manager_id no existe"}
+		}
 	}
 
 	return nil
@@ -127,18 +135,14 @@ func valueOrEmptyString(s string) string {
 }
 
 func (s *PropertyService) validateUpdate(in dto.UpdatePropertyDTO) error {
-	// Si se especifica property_type, validarlo
-	if in.PropertyType != nil {
-		validTypes := []string{"APARTMENT", "HOUSE", "COMMERCIAL_SPACE", "OFFICE", "LAND", "INDUSTRIAL_WAREHOUSE"}
-		isValid := false
-		for _, t := range validTypes {
-			if *in.PropertyType == t {
-				isValid = true
-				break
-			}
+	// Si se especifica property_type_id, validarlo
+	if in.PropertyTypeID != nil {
+		exists, err := s.repo.PropertyTypeExists(*in.PropertyTypeID)
+		if err != nil {
+			return &rerrors.InternalServerError{Msg: "Error validando property_type_id: " + err.Error()}
 		}
-		if !isValid {
-			return &rerrors.ValidationError{Msg: "property_type debe ser uno de: " + fmt.Sprintf("%v", validTypes)}
+		if !exists {
+			return &rerrors.NotFoundError{Msg: "property_type_id no existe"}
 		}
 	}
 
@@ -170,7 +174,7 @@ func (s *PropertyService) CreateProperty(ctx context.Context, in dto.CreatePrope
 	property := &models.Property{
 		OwnerPersonID:  in.OwnerPersonID,
 		AddressID:      *addrID, // Desreferenciar el puntero
-		PropertyType:   models.PropertyType(in.PropertyType),
+		PropertyTypeID: in.PropertyTypeID,
 		InternalCode:   in.InternalCode,
 		YearBuilt:      in.YearBuilt,
 		Bedrooms:       in.Bedrooms,
@@ -190,17 +194,17 @@ func (s *PropertyService) CreateProperty(ctx context.Context, in dto.CreatePrope
 	// Crear management si se especificó
 	if in.Management != nil {
 		management := &models.PropertyManagement{
-			PropertyID:        created.ID,
-			OrganizationID:    in.Management.OrganizationID,
-			ManagedSince:      time.Now(),
-			CommissionPercent: in.Management.CommissionPercent,
-			Notes:             in.Management.Notes,
+			PropertyID:           created.ID,
+			ManagerID:            in.Management.ManagerID,
+			ManagerTypeID:        in.Management.ManagerTypeID,
+			StartDate:            time.Now(),
+			CommissionPercentage: in.Management.CommissionPercentage,
 		}
-		if in.Management.ManagedSince != nil {
-			management.ManagedSince = *in.Management.ManagedSince
+		if in.Management.StartDate != nil {
+			management.StartDate = *in.Management.StartDate
 		}
-		if in.Management.ManagedUntil != nil {
-			management.ManagedUntil = in.Management.ManagedUntil
+		if in.Management.EndDate != nil {
+			management.EndDate = in.Management.EndDate
 		}
 
 		_, err := s.repo.CreateManagement(management)
@@ -244,14 +248,8 @@ func (s *PropertyService) GetProperty(ctx context.Context, id string) (*dto.Prop
 	return &response, nil
 }
 
-func (s *PropertyService) ListProperties(ctx context.Context, search string, propertyType *string, ownerPersonID *string, limit, offset int) ([]dto.PropertyResponseDTO, int64, error) {
-	s.lg.Debug("Listing properties", zap.String("search", search), zap.Any("type", propertyType))
-
-	var pType *models.PropertyType
-	if propertyType != nil && *propertyType != "" {
-		pt := models.PropertyType(*propertyType)
-		pType = &pt
-	}
+func (s *PropertyService) ListProperties(ctx context.Context, search string, propertyTypeID *int, ownerPersonID *string, limit, offset int) ([]dto.PropertyResponseDTO, int64, error) {
+	s.lg.Debug("Listing properties", zap.String("search", search), zap.Any("propertyTypeID", propertyTypeID))
 
 	var ownerUUID *uuid.UUID
 	if ownerPersonID != nil && *ownerPersonID != "" {
@@ -262,7 +260,7 @@ func (s *PropertyService) ListProperties(ctx context.Context, search string, pro
 		ownerUUID = &parsed
 	}
 
-	properties, total, err := s.repo.List(search, pType, ownerUUID, limit, offset)
+	properties, total, err := s.repo.List(search, propertyTypeID, ownerUUID, limit, offset)
 	if err != nil {
 		s.lg.Error("Failed to list properties", zap.Error(err))
 		return nil, 0, &rerrors.InternalServerError{Msg: "failed to list properties"}
@@ -285,8 +283,8 @@ func (s *PropertyService) UpdateProperty(ctx context.Context, id string, in dto.
 
 	// Construir map de updates
 	updates := make(map[string]interface{})
-	if in.PropertyType != nil {
-		updates["property_type"] = models.PropertyType(*in.PropertyType)
+	if in.PropertyTypeID != nil {
+		updates["property_type_id"] = *in.PropertyTypeID
 	}
 	if in.InternalCode != nil {
 		updates["internal_code"] = *in.InternalCode
@@ -526,4 +524,66 @@ func (s *PropertyService) RemoveAmenityFromProperty(ctx context.Context, propert
 	}
 
 	return nil
+}
+
+/* ─────────────────────── Property-Amenity Relations ─────────────────────── */
+
+func (s *PropertyService) GetPropertyAmenities(ctx context.Context, propertyID string) ([]dto.AmenityResponseDTO, error) {
+	s.lg.Debug("Getting property amenities", zap.String("propertyID", propertyID))
+
+	propUUID, err := uuid.Parse(propertyID)
+	if err != nil {
+		return nil, &rerrors.BadRequestError{Msg: "invalid property ID"}
+	}
+
+	amenities, err := s.repo.GetPropertyAmenities(propUUID)
+	if err != nil {
+		s.lg.Error("Failed to get property amenities", zap.Error(err))
+		return nil, &rerrors.InternalServerError{Msg: "failed to get property amenities"}
+	}
+
+	var responses []dto.AmenityResponseDTO
+	for _, amenity := range amenities {
+		responses = append(responses, dto.ToAmenityResponse(&amenity))
+	}
+
+	return responses, nil
+}
+
+/* ─────────────────────── Property Types ─────────────────────── */
+
+func (s *PropertyService) GetPropertyTypes(ctx context.Context) ([]dto.PropertyTypeResponseDTO, error) {
+	s.lg.Debug("Getting property types")
+
+	types, err := s.repo.GetPropertyTypes()
+	if err != nil {
+		s.lg.Error("Failed to get property types", zap.Error(err))
+		return nil, &rerrors.InternalServerError{Msg: "failed to get property types"}
+	}
+
+	var responses []dto.PropertyTypeResponseDTO
+	for _, pType := range types {
+		responses = append(responses, dto.ToPropertyTypeResponse(&pType))
+	}
+
+	return responses, nil
+}
+
+/* ─────────────────────── Manager Types ─────────────────────── */
+
+func (s *PropertyService) GetManagerTypes(ctx context.Context) ([]dto.ManagerTypeResponseDTO, error) {
+	s.lg.Debug("Getting manager types")
+
+	types, err := s.repo.GetManagerTypes()
+	if err != nil {
+		s.lg.Error("Failed to get manager types", zap.Error(err))
+		return nil, &rerrors.InternalServerError{Msg: "failed to get manager types"}
+	}
+
+	var responses []dto.ManagerTypeResponseDTO
+	for _, mType := range types {
+		responses = append(responses, dto.ToManagerTypeResponse(&mType))
+	}
+
+	return responses, nil
 }

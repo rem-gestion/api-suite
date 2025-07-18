@@ -3,8 +3,8 @@
 ## ✅ **DESARROLLO COMPLETADO**
 
 ### 🏗️ **Arquitectura Base**
-- ✅ **Microservicios funcionales**: auth-identity, person, address
-- ✅ **API Gateway centralizado**: nginx configurado
+- ✅ **Microservicios funcionales**: auth-identity, person, address, property
+- ✅ **API Gateway centralizado**: nginx configurado con todas las rutas
 - ✅ **Base de datos compartida**: PostgreSQL con migraciones automáticas
 - ✅ **Comunicación gRPC**: Entre servicios
 - ✅ **Librería compartida**: rem-common con utilidades comunes
@@ -27,6 +27,16 @@
 - ✅ **Variables de entorno**: Configuración multi-entorno
 - ✅ **Middleware de seguridad**: Rate limiting, CORS, logging
 - ✅ **Validación de datos**: Entrada y schemas consistentes
+
+### 🏢 **Property Service - NUEVO** 
+- ✅ **CRUD completo**: Propiedades, amenities, gestión
+- ✅ **Integración gRPC**: Con Address Service para direcciones automáticas
+- ✅ **Creación inteligente**: Auto-creación/reutilización de direcciones
+- ✅ **Tipos de propiedad**: 6 tipos (apartamento, casa, oficina, etc.)
+- ✅ **Property Management**: Comisiones y gestión por organizaciones
+- ✅ **Relaciones N:N**: Properties ↔ Amenities flexibles
+- ✅ **Validaciones avanzadas**: DTOs con campos mutuamente excluyentes
+- ✅ **Health checks**: Verificación de dependencias en startup
 
 ---
 
@@ -52,6 +62,7 @@
 - 🔐 **Auth Service**: http://localhost:4002
 - 👥 **Person Service**: http://localhost:4001
 - 🏠 **Address Service**: http://localhost:4000
+- 🏢 **Property Service**: http://localhost:4004
 
 ### **Postman Collections**
 - **Archivo**: `REM-API-Collection.postman_collection.json`
@@ -88,7 +99,6 @@
 
 ### **2. Desarrollo del Core Business (2-4 semanas)**
 - 🏢 **Organization Service**: Gestión de inmobiliarias
-- 🏠 **Property Service**: Gestión de propiedades inmobiliarias
 - 📋 **Contract Service**: Contratos de venta/alquiler
 
 ### **3. Expansión Funcional (1-3 meses)**

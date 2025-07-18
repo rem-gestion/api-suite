@@ -149,6 +149,19 @@ func (m *MockExternalServices) ValidateOrganizationExists(orgID uuid.UUID) bool 
 	return exists
 }
 
+// ValidateManagerExists simula la validación de existencia de gestor según su tipo
+func (m *MockExternalServices) ValidateManagerExists(managerID uuid.UUID, managerTypeID int) bool {
+	// Manager Type 1 = PERSON, Manager Type 2 = ORGANIZATION
+	switch managerTypeID {
+	case 1: // PERSON
+		return m.ValidatePersonExists(managerID)
+	case 2: // ORGANIZATION
+		return m.ValidateOrganizationExists(managerID)
+	default:
+		return false
+	}
+}
+
 // GetAddress simula obtener una dirección por ID
 func (m *MockExternalServices) GetAddress(addressID uuid.UUID) (*MockAddress, bool) {
 	addresses := m.GetMockAddresses()

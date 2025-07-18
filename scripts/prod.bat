@@ -22,6 +22,11 @@ if not exist bin mkdir bin
 go build -o bin/person-svc.exe ./cmd/main.go
 cd ..
 
+cd property-svc
+if not exist bin mkdir bin
+go build -o bin/property-svc.exe ./cmd/api/main.go
+cd ..
+
 REM Ejecutar migraciones de producción
 echo 🔄 Ejecutando migraciones de producción...
 cd auth-identity-svc
@@ -36,8 +41,13 @@ cd person-svc
 bin\person-svc.exe migrate
 cd ..
 
+cd property-svc
+go run ./cmd/migrate/main.go
+cd ..
+
 echo 🚀 Binarios compilados. Para iniciar en producción:
 echo Terminal 1: cd auth-identity-svc ^&^& bin\auth-svc.exe
 echo Terminal 2: cd address-svc ^&^& bin\address-svc.exe
 echo Terminal 3: cd person-svc ^&^& bin\person-svc.exe
+echo Terminal 4: cd property-svc ^&^& bin\property-svc.exe
 pause

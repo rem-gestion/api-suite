@@ -55,12 +55,14 @@ func (c *Ctrl) ListProperties(ctx *gin.Context) {
 	}
 
 	search := ctx.Query("search")
-	propertyType := ctx.Query("type")
+	propertyTypeIDStr := ctx.Query("property_type_id")
 	ownerPersonID := ctx.Query("owner_person_id")
 
-	var pType *string
-	if propertyType != "" {
-		pType = &propertyType
+	var propertyTypeID *int
+	if propertyTypeIDStr != "" {
+		if id, err := strconv.Atoi(propertyTypeIDStr); err == nil {
+			propertyTypeID = &id
+		}
 	}
 	var ownerID *string
 	if ownerPersonID != "" {
@@ -70,7 +72,7 @@ func (c *Ctrl) ListProperties(ctx *gin.Context) {
 	limit := per
 	offset := (page - 1) * per
 
-	list, total, err := c.svc.ListProperties(ctx.Request.Context(), search, pType, ownerID, limit, offset)
+	list, total, err := c.svc.ListProperties(ctx.Request.Context(), search, propertyTypeID, ownerID, limit, offset)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -226,4 +228,42 @@ func (c *Ctrl) RemoveAmenityFromProperty(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+/* ───────────────────── Property-Amenity Relations ────────────────────── */
+
+// GET /properties/:property_id/amenities
+func (c *Ctrl) GetPropertyAmenities(ctx *gin.Context) {
+	propertyID := ctx.Param("property_id")
+
+	amenities, err := c.svc.GetPropertyAmenities(ctx.Request.Context(), propertyID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": amenities})
+}
+
+/* ───────────────────── Property Types ────────────────────── */
+
+// GET /property-types
+func (c *Ctrl) GetPropertyTypes(ctx *gin.Context) {
+	types, err := c.svc.GetPropertyTypes(ctx.Request.Context())
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": types})
+}
+
+/* ───────────────────── Manager Types ────────────────────── */
+
+// GET /manager-types
+func (c *Ctrl) GetManagerTypes(ctx *gin.Context) {
+	types, err := c.svc.GetManagerTypes(ctx.Request.Context())
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": types})
 }

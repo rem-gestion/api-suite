@@ -1,3 +1,17 @@
+-- Insert property type data
+INSERT INTO property_type (code, name, description) VALUES
+('APARTMENT', 'Departamento', 'Unidad habitacional en edificio de departamentos'),
+('HOUSE', 'Casa', 'Vivienda unifamiliar independiente'),
+('COMMERCIAL_SPACE', 'Local Comercial', 'Espacio destinado a actividad comercial'),
+('OFFICE', 'Oficina', 'Espacio destinado a actividades de oficina'),
+('LAND', 'Terreno', 'Lote de tierra sin construcciones'),
+('INDUSTRIAL_WAREHOUSE', 'Galpón Industrial', 'Nave industrial para uso manufacturero o depósito');
+
+-- Insert manager type data
+INSERT INTO manager_type (code, name, description) VALUES
+('PERSON', 'Persona', 'Persona física responsable de la gestión'),
+('ORGANIZATION', 'Organización', 'Empresa u organización responsable de la gestión');
+
 -- Insertar amenities básicas para testing
 INSERT INTO amenity (id, name, description, icon, category, created_at) VALUES
 ('11111111-1111-1111-1111-111111111111', 'Piscina', 'Piscina climatizada', 'pool', 'recreation', now()),
@@ -11,19 +25,19 @@ INSERT INTO amenity (id, name, description, icon, category, created_at) VALUES
 ('99999999-9999-9999-9999-999999999999', 'Jardín', 'Jardín compartido', 'garden', 'recreation', now()),
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Parrilla', 'Zona de parrillas', 'grill', 'recreation', now());
 
--- Datos dummy para propiedades (usando IDs mock)
-INSERT INTO property (id, owner_person_id, address_id, property_type, internal_code, year_built, bedrooms, bathrooms, total_area_sqm, covered_area_sqm, description, created_at) VALUES
-('aaaa1111-aaaa-1111-aaaa-111111111111', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'APARTMENT', 'DEPT-001', 2020, 2, 1.5, 85.50, 75.00, 'Departamento moderno en zona céntrica con excelente iluminación', now()),
-('bbbb2222-bbbb-2222-bbbb-222222222222', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'HOUSE', 'CASA-001', 2018, 3, 2.0, 150.00, 120.00, 'Casa familiar con jardín en barrio tranquilo', now()),
-('cccc3333-cccc-3333-cccc-333333333333', '11111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'COMMERCIAL_SPACE', 'LOCAL-001', 2019, 0, 1.0, 80.00, 80.00, 'Local comercial sobre avenida principal con gran exposición', now()),
-('dddd4444-dddd-4444-dddd-444444444444', '33333333-3333-3333-3333-333333333333', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'OFFICE', 'OFICINA-001', 2021, 0, 2.0, 95.00, 95.00, 'Oficina corporativa en torre moderna con vista panorámica', now()),
-('eeee5555-eeee-5555-eeee-555555555555', '44444444-4444-4444-4444-444444444444', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'LAND', 'TERRENO-001', NULL, NULL, NULL, 500.00, 0.00, 'Terreno para desarrollo en zona en crecimiento', now());
+-- Datos dummy para propiedades (usando IDs mock y property_type_id)
+INSERT INTO property (id, owner_person_id, address_id, property_type_id, internal_code, year_built, bedrooms, bathrooms, total_area_sqm, covered_area_sqm, description, created_at) VALUES
+('aaaa1111-aaaa-1111-aaaa-111111111111', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 'DEPT-001', 2020, 2, 1.5, 85.50, 75.00, 'Departamento moderno en zona céntrica con excelente iluminación', now()),
+('bbbb2222-bbbb-2222-bbbb-222222222222', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 'CASA-001', 2018, 3, 2.0, 150.00, 120.00, 'Casa familiar con jardín en barrio tranquilo', now()),
+('cccc3333-cccc-3333-cccc-333333333333', '11111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 3, 'LOCAL-001', 2019, 0, 1.0, 80.00, 80.00, 'Local comercial sobre avenida principal con gran exposición', now()),
+('dddd4444-dddd-4444-dddd-444444444444', '33333333-3333-3333-3333-333333333333', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 4, 'OFICINA-001', 2021, 0, 2.0, 95.00, 95.00, 'Oficina corporativa en torre moderna con vista panorámica', now()),
+('eeee5555-eeee-5555-eeee-555555555555', '44444444-4444-4444-4444-444444444444', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 5, 'TERRENO-001', NULL, NULL, NULL, 500.00, 0.00, 'Terreno para desarrollo en zona en crecimiento', now());
 
--- Datos dummy para property management (usando organization IDs mock)
-INSERT INTO property_management (id, property_id, organization_id, managed_since, is_active, commission_percent, notes, created_at) VALUES
-('aaaa1111-bbbb-2222-cccc-333333333333', 'aaaa1111-aaaa-1111-aaaa-111111111111', '99999999-9999-9999-9999-999999999999', '2024-01-01', true, 3.5, 'Gestión integral del departamento céntrico', now()),
-('bbbb2222-cccc-3333-dddd-444444444444', 'bbbb2222-bbbb-2222-bbbb-222222222222', '99999999-9999-9999-9999-999999999999', '2024-02-15', true, 4.0, 'Administración de casa familiar', now()),
-('cccc3333-dddd-4444-eeee-555555555555', 'cccc3333-cccc-3333-cccc-333333333333', '88888888-8888-8888-8888-888888888888', '2024-03-01', true, 5.0, 'Gestión comercial especializada', now());
+-- Datos dummy para property management (usando nueva estructura)
+INSERT INTO property_management (id, property_id, manager_id, manager_type_id, start_date, commission_percentage, created_at) VALUES
+('aaaa1111-bbbb-2222-cccc-333333333333', 'aaaa1111-aaaa-1111-aaaa-111111111111', '99999999-9999-9999-9999-999999999999', 2, '2024-01-01', 3.5, now()),
+('bbbb2222-cccc-3333-dddd-444444444444', 'bbbb2222-bbbb-2222-bbbb-222222222222', '99999999-9999-9999-9999-999999999999', 2, '2024-02-15', 4.0, now()),
+('cccc3333-dddd-4444-eeee-555555555555', 'cccc3333-cccc-3333-cccc-333333333333', '88888888-8888-8888-8888-888888888888', 2, '2024-03-01', 5.0, now());
 
 -- Relacionar propiedades con amenities
 INSERT INTO property_amenities (id, property_id, amenity_id, created_at) VALUES

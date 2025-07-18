@@ -3,6 +3,5 @@ DROP TABLE IF EXISTS property_amenities;
 DROP TABLE IF EXISTS amenity;
 DROP TABLE IF EXISTS property_management;
 DROP TABLE IF EXISTS property;
-
--- Eliminar tipos personalizados
-DROP TYPE IF EXISTS property_type;
+DROP TABLE IF EXISTS manager_type;
+DROP TABLE IF EXISTS property_type;

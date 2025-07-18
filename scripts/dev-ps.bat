@@ -35,6 +35,10 @@ cd person-svc
 go run ./cmd/migrate
 cd ..
 
+cd property-svc
+go run ./cmd/migrate
+cd ..
+
 REM Preguntar si poblar la base de datos usando PowerShell
 echo.
 echo ═══════════════════════════════════════════════════════════════
@@ -103,16 +107,19 @@ REM Iniciar servicios automaticamente
 echo Iniciando servicios automaticamente...
 echo.
 echo 🌐 API Gateway: http://localhost:8081
-echo   ├─ Auth API:    http://localhost:8081/api/auth/
-echo   ├─ Users API:   http://localhost:8081/api/users/
-echo   ├─ Person API:  http://localhost:8081/api/persons/
-echo   ├─ Address API: http://localhost:8081/api/addresses/
-echo   └─ Health:      http://localhost:8081/health
+echo   ├─ Auth API:      http://localhost:8081/api/auth/
+echo   ├─ Users API:     http://localhost:8081/api/users/
+echo   ├─ Person API:    http://localhost:8081/api/persons/
+echo   ├─ Address API:   http://localhost:8081/api/addresses/
+echo   ├─ Property API:  http://localhost:8081/api/properties/
+echo   ├─ Amenities API: http://localhost:8081/api/amenities/
+echo   └─ Health:        http://localhost:8081/health
 echo.
 echo 🔧 Servicios individuales:
-echo   ├─ Auth Service:    http://localhost:4002
-echo   ├─ Address Service: http://localhost:4000  
-echo   └─ Person Service:  http://localhost:4001
+echo   ├─ Auth Service:     http://localhost:4002
+echo   ├─ Address Service:  http://localhost:4000  
+echo   ├─ Person Service:   http://localhost:4001
+echo   └─ Property Service: http://localhost:4004
 echo.
 
 REM Abrir terminales con Air para cada servicio
@@ -127,6 +134,9 @@ start "REM Address Service" cmd /k "cd /d %cd%\address-svc && echo [ADDRESS] Ini
 REM Terminal 3: Person Service
 start "REM Person Service" cmd /k "cd /d %cd%\person-svc && echo [PERSON] Iniciando Person Service... && air"
 
+REM Terminal 4: Property Service
+start "REM Property Service" cmd /k "cd /d %cd%\property-svc && echo [PROPERTY] Iniciando Property Service... && air"
+
 echo.
 echo ✅ Entorno de desarrollo iniciado exitosamente!
 echo.
@@ -136,9 +146,10 @@ echo.
 echo 📋 Ejemplos de uso:
 echo    curl http://localhost:8081/api/persons/
 echo    curl http://localhost:8081/api/addresses/
+echo    curl http://localhost:8081/api/properties/
 echo    curl http://localhost:8081/api/auth/validate
 echo.
-echo 🛠️ Se han abierto 3 terminales con los servicios ejecutandose
+echo 🛠️ Se han abierto 4 terminales con los servicios ejecutandose
 echo Para detener todo, cierra las terminales o usa Ctrl+C en cada una
 echo Para limpiar el entorno, ejecuta: .\scripts\clean.bat
 echo.

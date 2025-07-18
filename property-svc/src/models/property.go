@@ -7,25 +7,40 @@ import (
 	"gorm.io/gorm"
 )
 
-// ---- enums ----
-type PropertyType string
+// ---- Type tables ----
+type PropertyType struct {
+	ID          int       `gorm:"primaryKey;autoIncrement"`
+	Code        string    `gorm:"size:50;unique;not null"`
+	Name        string    `gorm:"size:100;not null"`
+	Description *string   `gorm:"type:text"`
+	IsActive    bool      `gorm:"not null;default:true"`
+	CreatedAt   time.Time `gorm:"not null;default:now()"`
+	UpdatedAt   *time.Time
 
-const (
-	PropertyApartment           PropertyType = "APARTMENT"
-	PropertyHouse               PropertyType = "HOUSE"
-	PropertyCommercialSpace     PropertyType = "COMMERCIAL_SPACE"
-	PropertyOffice              PropertyType = "OFFICE"
-	PropertyLand                PropertyType = "LAND"
-	PropertyIndustrialWarehouse PropertyType = "INDUSTRIAL_WAREHOUSE"
-)
+	// Relations
+	Properties []Property `gorm:"foreignKey:PropertyTypeID"`
+}
+
+type ManagerType struct {
+	ID          int       `gorm:"primaryKey;autoIncrement"`
+	Code        string    `gorm:"size:50;unique;not null"`
+	Name        string    `gorm:"size:100;not null"`
+	Description *string   `gorm:"type:text"`
+	IsActive    bool      `gorm:"not null;default:true"`
+	CreatedAt   time.Time `gorm:"not null;default:now()"`
+	UpdatedAt   *time.Time
+
+	// Relations
+	PropertyManagements []PropertyManagement `gorm:"foreignKey:ManagerTypeID"`
+}
 
 // ---- core tables ----
 type Property struct {
-	ID             uuid.UUID    `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	OwnerPersonID  uuid.UUID    `gorm:"type:uuid;not null;index"`
-	AddressID      uuid.UUID    `gorm:"type:uuid;not null;unique"`
-	PropertyType   PropertyType `gorm:"type:property_type;not null;index"`
-	InternalCode   *string      `gorm:"size:50;unique"`
+	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	OwnerPersonID  uuid.UUID `gorm:"type:uuid;not null;index"`
+	AddressID      uuid.UUID `gorm:"type:uuid;not null;unique"`
+	PropertyTypeID int       `gorm:"not null;index"`
+	InternalCode   *string   `gorm:"size:50;unique"`
 	YearBuilt      *int
 	Bedrooms       *int
 	Bathrooms      *float32 `gorm:"type:decimal(3,1)"`
@@ -39,19 +54,19 @@ type Property struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	// Relations
+	PropertyType       PropertyType         `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
 	PropertyManagement []PropertyManagement `gorm:"foreignKey:PropertyID"`
 	PropertyAmenities  []PropertyAmenity    `gorm:"foreignKey:PropertyID"`
 }
 
 type PropertyManagement struct {
-	ID                uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	PropertyID        uuid.UUID `gorm:"type:uuid;not null;index"`
-	OrganizationID    uuid.UUID `gorm:"type:uuid;not null;index"`
-	ManagedSince      time.Time `gorm:"not null;default:now()"`
-	ManagedUntil      *time.Time
-	IsActive          bool     `gorm:"not null;default:true;index"`
-	CommissionPercent *float64 `gorm:"type:decimal(5,2)"`
-	Notes             *string  `gorm:"type:text"`
+	ID                   uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	PropertyID           uuid.UUID  `gorm:"type:uuid;not null;index"`
+	ManagerID            uuid.UUID  `gorm:"type:uuid;not null;index"`
+	ManagerTypeID        int        `gorm:"not null;index"`
+	StartDate            time.Time  `gorm:"type:date;not null"`
+	EndDate              *time.Time `gorm:"type:date"`
+	CommissionPercentage *float64   `gorm:"type:decimal(5,2)"`
 
 	CreatedAt time.Time
 	UpdatedAt *time.Time
@@ -59,7 +74,8 @@ type PropertyManagement struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	// Relations
-	Property Property `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Property    Property    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	ManagerType ManagerType `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
 }
 
 type Amenity struct {
@@ -90,6 +106,8 @@ type PropertyAmenity struct {
 }
 
 // Table names
+func (PropertyType) TableName() string       { return "property_type" }
+func (ManagerType) TableName() string        { return "manager_type" }
 func (Property) TableName() string           { return "property" }
 func (PropertyManagement) TableName() string { return "property_management" }
 func (Amenity) TableName() string            { return "amenity" }

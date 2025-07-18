@@ -37,15 +37,15 @@ func (r *PropertyRepo) Get(id string) (*models.Property, error) {
 	return &p, err
 }
 
-func (r *PropertyRepo) List(search string, propertyType *models.PropertyType, ownerPersonID *uuid.UUID, limit, offset int) ([]models.Property, int64, error) {
+func (r *PropertyRepo) List(search string, propertyTypeID *int, ownerPersonID *uuid.UUID, limit, offset int) ([]models.Property, int64, error) {
 	var list []models.Property
 	var total int64
 
 	q := r.preloads(r.db.Model(&models.Property{})).
 		Limit(limit).Offset(offset)
 
-	if propertyType != nil {
-		q = q.Where("property_type = ?", *propertyType)
+	if propertyTypeID != nil {
+		q = q.Where("property_type_id = ?", *propertyTypeID)
 	}
 
 	if ownerPersonID != nil {
@@ -60,8 +60,8 @@ func (r *PropertyRepo) List(search string, propertyType *models.PropertyType, ow
 
 	// Count total
 	countQ := r.db.Model(&models.Property{})
-	if propertyType != nil {
-		countQ = countQ.Where("property_type = ?", *propertyType)
+	if propertyTypeID != nil {
+		countQ = countQ.Where("property_type_id = ?", *propertyTypeID)
 	}
 	if ownerPersonID != nil {
 		countQ = countQ.Where("owner_person_id = ?", *ownerPersonID)
@@ -241,11 +241,53 @@ func (r *PropertyRepo) GetPropertyAmenities(propertyID uuid.UUID) ([]models.Amen
 	return amenities, err
 }
 
+/* ───────────────── Type validation methods ─────────────────── */
+
+func (r *PropertyRepo) PropertyTypeExists(id int) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.PropertyType{}).
+		Where("id = ? AND is_active = true", id).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *PropertyRepo) ManagerTypeExists(id int) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.ManagerType{}).
+		Where("id = ? AND is_active = true", id).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *PropertyRepo) GetPropertyTypes() ([]models.PropertyType, error) {
+	var types []models.PropertyType
+	err := r.db.Where("is_active = true").
+		Order("name").
+		Find(&types).Error
+	return types, err
+}
+
+func (r *PropertyRepo) GetManagerTypes() ([]models.ManagerType, error) {
+	var types []models.ManagerType
+	err := r.db.Where("is_active = true").
+		Order("name").
+		Find(&types).Error
+	return types, err
+}
+
 /* ───────────────── helpers ─────────────────── */
 
 func (r *PropertyRepo) preloads(db *gorm.DB) *gorm.DB {
 	return db.
+		Preload("PropertyType").
 		Preload("PropertyManagement").
+		Preload("PropertyManagement.ManagerType").
 		Preload("PropertyAmenities").
 		Preload("PropertyAmenities.Amenity")
 }

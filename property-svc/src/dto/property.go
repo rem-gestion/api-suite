@@ -13,7 +13,7 @@ type CreatePropertyDTO struct {
 	OwnerPersonID  uuid.UUID          `json:"owner_person_id"   validate:"required"`
 	AddressID      *uuid.UUID         `json:"address_id,omitempty"`      // escenario 1: usar dirección existente
 	Address        *AddressPayloadDTO `json:"address_payload,omitempty"` // escenario 2: crear nueva dirección
-	PropertyType   string             `json:"property_type"     validate:"required,oneof=APARTMENT HOUSE COMMERCIAL_SPACE OFFICE LAND INDUSTRIAL_WAREHOUSE"`
+	PropertyTypeID int                `json:"property_type_id"  validate:"required,min=1"`
 	InternalCode   *string            `json:"internal_code,omitempty"`
 	YearBuilt      *int               `json:"year_built,omitempty"        validate:"omitempty,min=1800,max=2100"`
 	Bedrooms       *int               `json:"bedrooms,omitempty"          validate:"omitempty,min=0,max=50"`
@@ -43,7 +43,7 @@ type AddressPayloadDTO struct {
 }
 
 type UpdatePropertyDTO struct {
-	PropertyType   *string  `json:"property_type,omitempty"     validate:"omitempty,oneof=APARTMENT HOUSE COMMERCIAL_SPACE OFFICE LAND INDUSTRIAL_WAREHOUSE"`
+	PropertyTypeID *int     `json:"property_type_id,omitempty"  validate:"omitempty,min=1"`
 	InternalCode   *string  `json:"internal_code,omitempty"`
 	YearBuilt      *int     `json:"year_built,omitempty"        validate:"omitempty,min=1800,max=2100"`
 	Bedrooms       *int     `json:"bedrooms,omitempty"          validate:"omitempty,min=0,max=50"`
@@ -54,17 +54,18 @@ type UpdatePropertyDTO struct {
 }
 
 type PropertyResponseDTO struct {
-	ID             uuid.UUID `json:"id"`
-	OwnerPersonID  uuid.UUID `json:"owner_person_id"`
-	AddressID      uuid.UUID `json:"address_id"`
-	PropertyType   string    `json:"property_type"`
-	InternalCode   *string   `json:"internal_code,omitempty"`
-	YearBuilt      *int      `json:"year_built,omitempty"`
-	Bedrooms       *int      `json:"bedrooms,omitempty"`
-	Bathrooms      *float32  `json:"bathrooms,omitempty"`
-	TotalAreaSqm   *float64  `json:"total_area_sqm,omitempty"`
-	CoveredAreaSqm *float64  `json:"covered_area_sqm,omitempty"`
-	Description    *string   `json:"description,omitempty"`
+	ID               uuid.UUID `json:"id"`
+	OwnerPersonID    uuid.UUID `json:"owner_person_id"`
+	AddressID        uuid.UUID `json:"address_id"`
+	PropertyTypeID   int       `json:"property_type_id"`
+	PropertyTypeName *string   `json:"property_type_name,omitempty"` // For convenience in API responses
+	InternalCode     *string   `json:"internal_code,omitempty"`
+	YearBuilt        *int      `json:"year_built,omitempty"`
+	Bedrooms         *int      `json:"bedrooms,omitempty"`
+	Bathrooms        *float32  `json:"bathrooms,omitempty"`
+	TotalAreaSqm     *float64  `json:"total_area_sqm,omitempty"`
+	CoveredAreaSqm   *float64  `json:"covered_area_sqm,omitempty"`
+	Description      *string   `json:"description,omitempty"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
@@ -77,30 +78,28 @@ type PropertyResponseDTO struct {
 /* ─────────────────────────  PROPERTY MANAGEMENT  ───────────────────────── */
 
 type CreatePropertyManagementDTO struct {
-	PropertyID        uuid.UUID  `json:"property_id"        validate:"required"`
-	OrganizationID    uuid.UUID  `json:"organization_id"    validate:"required"`
-	ManagedSince      *time.Time `json:"managed_since,omitempty"`
-	ManagedUntil      *time.Time `json:"managed_until,omitempty"`
-	CommissionPercent *float64   `json:"commission_percent,omitempty" validate:"omitempty,min=0,max=100"`
-	Notes             *string    `json:"notes,omitempty"`
+	PropertyID           uuid.UUID  `json:"property_id"         validate:"required"`
+	ManagerID            uuid.UUID  `json:"manager_id"          validate:"required"`
+	ManagerTypeID        int        `json:"manager_type_id"     validate:"required,min=1"`
+	StartDate            *time.Time `json:"start_date,omitempty"`
+	EndDate              *time.Time `json:"end_date,omitempty"`
+	CommissionPercentage *float64   `json:"commission_percentage,omitempty" validate:"omitempty,min=0,max=100"`
 }
 
 type UpdatePropertyManagementDTO struct {
-	ManagedUntil      *time.Time `json:"managed_until,omitempty"`
-	IsActive          *bool      `json:"is_active,omitempty"`
-	CommissionPercent *float64   `json:"commission_percent,omitempty" validate:"omitempty,min=0,max=100"`
-	Notes             *string    `json:"notes,omitempty"`
+	EndDate              *time.Time `json:"end_date,omitempty"`
+	CommissionPercentage *float64   `json:"commission_percentage,omitempty" validate:"omitempty,min=0,max=100"`
 }
 
 type PropertyManagementResponseDTO struct {
-	ID                uuid.UUID  `json:"id"`
-	PropertyID        uuid.UUID  `json:"property_id"`
-	OrganizationID    uuid.UUID  `json:"organization_id"`
-	ManagedSince      time.Time  `json:"managed_since"`
-	ManagedUntil      *time.Time `json:"managed_until,omitempty"`
-	IsActive          bool       `json:"is_active"`
-	CommissionPercent *float64   `json:"commission_percent,omitempty"`
-	Notes             *string    `json:"notes,omitempty"`
+	ID                   uuid.UUID  `json:"id"`
+	PropertyID           uuid.UUID  `json:"property_id"`
+	ManagerID            uuid.UUID  `json:"manager_id"`
+	ManagerTypeID        int        `json:"manager_type_id"`
+	ManagerTypeName      *string    `json:"manager_type_name,omitempty"` // For convenience
+	StartDate            time.Time  `json:"start_date"`
+	EndDate              *time.Time `json:"end_date,omitempty"`
+	CommissionPercentage *float64   `json:"commission_percentage,omitempty"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
@@ -133,6 +132,30 @@ type AmenityResponseDTO struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
+/* ─────────────────────────  PROPERTY TYPE  ───────────────────────── */
+
+type PropertyTypeResponseDTO struct {
+	ID          int        `json:"id"`
+	Code        string     `json:"code"`
+	Name        string     `json:"name"`
+	Description *string    `json:"description,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+}
+
+/* ─────────────────────────  MANAGER TYPE  ───────────────────────── */
+
+type ManagerTypeResponseDTO struct {
+	ID          int        `json:"id"`
+	Code        string     `json:"code"`
+	Name        string     `json:"name"`
+	Description *string    `json:"description,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+}
+
 /* ─────────────────────────  CONVERTERS  ───────────────────────── */
 
 func ToPropertyResponse(property *models.Property) PropertyResponseDTO {
@@ -140,7 +163,7 @@ func ToPropertyResponse(property *models.Property) PropertyResponseDTO {
 		ID:             property.ID,
 		OwnerPersonID:  property.OwnerPersonID,
 		AddressID:      property.AddressID,
-		PropertyType:   string(property.PropertyType),
+		PropertyTypeID: property.PropertyTypeID,
 		InternalCode:   property.InternalCode,
 		YearBuilt:      property.YearBuilt,
 		Bedrooms:       property.Bedrooms,
@@ -152,20 +175,31 @@ func ToPropertyResponse(property *models.Property) PropertyResponseDTO {
 		UpdatedAt:      property.UpdatedAt,
 	}
 
+	// Add property type name if available
+	if property.PropertyType.Name != "" {
+		response.PropertyTypeName = &property.PropertyType.Name
+	}
+
 	// Convert management
 	for _, mgmt := range property.PropertyManagement {
-		response.Management = append(response.Management, PropertyManagementResponseDTO{
-			ID:                mgmt.ID,
-			PropertyID:        mgmt.PropertyID,
-			OrganizationID:    mgmt.OrganizationID,
-			ManagedSince:      mgmt.ManagedSince,
-			ManagedUntil:      mgmt.ManagedUntil,
-			IsActive:          mgmt.IsActive,
-			CommissionPercent: mgmt.CommissionPercent,
-			Notes:             mgmt.Notes,
-			CreatedAt:         mgmt.CreatedAt,
-			UpdatedAt:         mgmt.UpdatedAt,
-		})
+		mgmtResponse := PropertyManagementResponseDTO{
+			ID:                   mgmt.ID,
+			PropertyID:           mgmt.PropertyID,
+			ManagerID:            mgmt.ManagerID,
+			ManagerTypeID:        mgmt.ManagerTypeID,
+			StartDate:            mgmt.StartDate,
+			EndDate:              mgmt.EndDate,
+			CommissionPercentage: mgmt.CommissionPercentage,
+			CreatedAt:            mgmt.CreatedAt,
+			UpdatedAt:            mgmt.UpdatedAt,
+		}
+
+		// Add manager type name if available
+		if mgmt.ManagerType.Name != "" {
+			mgmtResponse.ManagerTypeName = &mgmt.ManagerType.Name
+		}
+
+		response.Management = append(response.Management, mgmtResponse)
 	}
 
 	// Convert amenities
@@ -193,5 +227,29 @@ func ToAmenityResponse(amenity *models.Amenity) AmenityResponseDTO {
 		Category:    amenity.Category,
 		CreatedAt:   amenity.CreatedAt,
 		UpdatedAt:   amenity.UpdatedAt,
+	}
+}
+
+func ToPropertyTypeResponse(propertyType *models.PropertyType) PropertyTypeResponseDTO {
+	return PropertyTypeResponseDTO{
+		ID:          propertyType.ID,
+		Code:        propertyType.Code,
+		Name:        propertyType.Name,
+		Description: propertyType.Description,
+		IsActive:    propertyType.IsActive,
+		CreatedAt:   propertyType.CreatedAt,
+		UpdatedAt:   propertyType.UpdatedAt,
+	}
+}
+
+func ToManagerTypeResponse(managerType *models.ManagerType) ManagerTypeResponseDTO {
+	return ManagerTypeResponseDTO{
+		ID:          managerType.ID,
+		Code:        managerType.Code,
+		Name:        managerType.Name,
+		Description: managerType.Description,
+		IsActive:    managerType.IsActive,
+		CreatedAt:   managerType.CreatedAt,
+		UpdatedAt:   managerType.UpdatedAt,
 	}
 }
