@@ -10,22 +10,36 @@ import (
 /* ─────────────────────────  PROPERTY  ───────────────────────── */
 
 type CreatePropertyDTO struct {
-	OwnerPersonID  uuid.UUID `json:"owner_person_id"   validate:"required"`
-	AddressID      uuid.UUID `json:"address_id"        validate:"required"`
-	PropertyType   string    `json:"property_type"     validate:"required,oneof=APARTMENT HOUSE COMMERCIAL_SPACE OFFICE LAND INDUSTRIAL_WAREHOUSE"`
-	InternalCode   *string   `json:"internal_code,omitempty"`
-	YearBuilt      *int      `json:"year_built,omitempty"        validate:"omitempty,min=1800,max=2100"`
-	Bedrooms       *int      `json:"bedrooms,omitempty"          validate:"omitempty,min=0,max=50"`
-	Bathrooms      *float32  `json:"bathrooms,omitempty"         validate:"omitempty,min=0,max=20"`
-	TotalAreaSqm   *float64  `json:"total_area_sqm,omitempty"    validate:"omitempty,min=0"`
-	CoveredAreaSqm *float64  `json:"covered_area_sqm,omitempty"  validate:"omitempty,min=0"`
-	Description    *string   `json:"description,omitempty"`
+	OwnerPersonID  uuid.UUID          `json:"owner_person_id"   validate:"required"`
+	AddressID      *uuid.UUID         `json:"address_id,omitempty"`      // escenario 1: usar dirección existente
+	Address        *AddressPayloadDTO `json:"address_payload,omitempty"` // escenario 2: crear nueva dirección
+	PropertyType   string             `json:"property_type"     validate:"required,oneof=APARTMENT HOUSE COMMERCIAL_SPACE OFFICE LAND INDUSTRIAL_WAREHOUSE"`
+	InternalCode   *string            `json:"internal_code,omitempty"`
+	YearBuilt      *int               `json:"year_built,omitempty"        validate:"omitempty,min=1800,max=2100"`
+	Bedrooms       *int               `json:"bedrooms,omitempty"          validate:"omitempty,min=0,max=50"`
+	Bathrooms      *float32           `json:"bathrooms,omitempty"         validate:"omitempty,min=0,max=20"`
+	TotalAreaSqm   *float64           `json:"total_area_sqm,omitempty"    validate:"omitempty,min=0"`
+	CoveredAreaSqm *float64           `json:"covered_area_sqm,omitempty"  validate:"omitempty,min=0"`
+	Description    *string            `json:"description,omitempty"`
 
 	// Management opcional al crear
 	Management *CreatePropertyManagementDTO `json:"management,omitempty"`
 
 	// Amenities opcionales al crear
 	AmenityIDs []uuid.UUID `json:"amenity_ids,omitempty"`
+}
+
+// AddressPayloadDTO contiene la información necesaria para crear una dirección
+// (copiado del person service para mantener consistencia)
+type AddressPayloadDTO struct {
+	Floor   *string `json:"floor,omitempty"`
+	Unit    *string `json:"unit,omitempty"`
+	Street  string  `json:"street"  validate:"required"`
+	Number  int     `json:"number"  validate:"required"`
+	City    string  `json:"city"    validate:"required"`
+	State   string  `json:"state,omitempty"`
+	Zip     string  `json:"zip,omitempty"`
+	Country string  `json:"country" validate:"required,len=2"`
 }
 
 type UpdatePropertyDTO struct {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +11,10 @@ import (
 	"github.com/rem-gestion/api-suite/property/src/models"
 	"github.com/rem-gestion/api-suite/property/src/repository"
 	rerrors "github.com/rem-gestion/rem-common/errors"
+	addresspb "github.com/rem-gestion/rem-common/protos/address/v1"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 )
 
@@ -18,14 +22,16 @@ import (
 
 type PropertyService struct {
 	repo    *repository.PropertyRepo
+	addrCli addresspb.AddressServiceClient
 	lg      *zap.Logger
 	timeout time.Duration
 	mockSvc *MockExternalServices // Para simulaciones hasta que tengamos gRPC
 }
 
-func New(repo *repository.PropertyRepo, lg *zap.Logger) *PropertyService {
+func New(repo *repository.PropertyRepo, addrConn *grpc.ClientConn, lg *zap.Logger) *PropertyService {
 	return &PropertyService{
 		repo:    repo,
+		addrCli: addresspb.NewAddressServiceClient(addrConn),
 		lg:      lg.Named("service"),
 		timeout: 3 * time.Second,
 		mockSvc: &MockExternalServices{}, // Inicializar mock service
@@ -35,22 +41,18 @@ func New(repo *repository.PropertyRepo, lg *zap.Logger) *PropertyService {
 /* ─────────────────────── helpers ─────────────────────────── */
 
 func (s *PropertyService) validateCreate(in dto.CreatePropertyDTO) error {
+	if in.AddressID != nil && in.Address != nil {
+		return &rerrors.BadRequestError{Msg: "address_id y address_payload son mutuamente excluyentes"}
+	}
+
 	// Validar datos básicos
 	if in.OwnerPersonID == uuid.Nil {
 		return &rerrors.ValidationError{Msg: "owner_person_id es requerido"}
-	}
-	if in.AddressID == uuid.Nil {
-		return &rerrors.ValidationError{Msg: "address_id es requerido"}
 	}
 
 	// Validar que el owner_person_id existe (usando mock por ahora)
 	if !s.mockSvc.ValidatePersonExists(in.OwnerPersonID) {
 		return &rerrors.NotFoundError{Msg: "owner_person_id no existe"}
-	}
-
-	// Validar que el address_id existe (usando mock por ahora)
-	if !s.mockSvc.ValidateAddressExists(in.AddressID) {
-		return &rerrors.NotFoundError{Msg: "address_id no existe"}
 	}
 
 	// Validar property_type
@@ -72,6 +74,56 @@ func (s *PropertyService) validateCreate(in dto.CreatePropertyDTO) error {
 	}
 
 	return nil
+}
+
+func (s *PropertyService) createRemoteAddress(ctx context.Context, a *dto.AddressPayloadDTO) (*uuid.UUID, error) {
+	req := &addresspb.CreateAddressRequest{
+		Address: &addresspb.Address{
+			Street:  a.Street,
+			Number:  int32(a.Number),
+			City:    a.City,
+			State:   valueOrEmptyString(a.State),
+			Zip:     valueOrEmptyString(a.Zip),
+			Country: a.Country,
+			Floor:   valueOrEmpty(a.Floor),
+			Unit:    valueOrEmpty(a.Unit),
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	res, err := s.addrCli.Create(ctx, req) //  ←  método Create
+	if err != nil {
+		st, _ := status.FromError(err)
+		return nil, &rerrors.InternalServerError{Msg: "address-svc: " + st.Message()}
+	}
+
+	// Validar que el ID devuelto sea un UUID válido
+	if res.Address == nil || res.Address.Id == "" {
+		return nil, &rerrors.InternalServerError{Msg: "address service returned empty ID"}
+	}
+
+	// Log para debug
+	log.Printf("DEBUG: Address service returned ID: '%s' (length: %d)", res.Address.Id, len(res.Address.Id))
+
+	id, err := uuid.Parse(res.Address.Id)
+	if err != nil {
+		return nil, &rerrors.InternalServerError{Msg: fmt.Sprintf("address service returned invalid UUID: %s", res.Address.Id)}
+	}
+
+	return &id, nil
+}
+
+func valueOrEmpty(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+func valueOrEmptyString(s string) string {
+	return s // Los strings ya pueden estar vacíos directamente
 }
 
 func (s *PropertyService) validateUpdate(in dto.UpdatePropertyDTO) error {
@@ -102,13 +154,22 @@ func (s *PropertyService) CreateProperty(ctx context.Context, in dto.CreatePrope
 		return nil, err
 	}
 
-	// TODO: Aquí deberíamos validar que owner_person_id y address_id existen en sus microservicios
-	// Por ahora, creamos datos mock/dummy
+	// --- Address ------------------------------------------------
+	var addrID *uuid.UUID
+	if in.AddressID != nil {
+		addrID = in.AddressID
+	} else if in.Address != nil {
+		id, err := s.createRemoteAddress(ctx, in.Address)
+		if err != nil {
+			return nil, err
+		}
+		addrID = id
+	}
 
 	// Mapear DTO a modelo
 	property := &models.Property{
 		OwnerPersonID:  in.OwnerPersonID,
-		AddressID:      in.AddressID,
+		AddressID:      *addrID, // Desreferenciar el puntero
 		PropertyType:   models.PropertyType(in.PropertyType),
 		InternalCode:   in.InternalCode,
 		YearBuilt:      in.YearBuilt,

@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,7 @@ import (
 	/* ───── rem-common ───── */
 	"github.com/rem-gestion/rem-common/config"
 	"github.com/rem-gestion/rem-common/db"
+	rcgrpc "github.com/rem-gestion/rem-common/grpc"
 	"github.com/rem-gestion/rem-common/logger"
 	mw "github.com/rem-gestion/rem-common/middleware"
 
@@ -26,6 +28,35 @@ import (
 	"github.com/rem-gestion/api-suite/property/src/router"
 	"github.com/rem-gestion/api-suite/property/src/services"
 )
+
+// waitForService waits for a service to be available at the given address
+func waitForService(address string, serviceName string, lg *zap.Logger, maxWait time.Duration) error {
+	lg.Info("waiting for service to be available",
+		zap.String("service", serviceName),
+		zap.String("address", address),
+		zap.Duration("max_wait", maxWait))
+
+	timeout := time.After(maxWait)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for %s at %s after %v", serviceName, address, maxWait)
+		case <-ticker.C:
+			conn, err := net.DialTimeout("tcp", address, 2*time.Second)
+			if err == nil {
+				conn.Close()
+				lg.Info("service is available", zap.String("service", serviceName))
+				return nil
+			}
+			lg.Debug("service not yet available",
+				zap.String("service", serviceName),
+				zap.Error(err))
+		}
+	}
+}
 
 func main() {
 	/* ---------- carga de config & logger ---------- */
@@ -55,8 +86,26 @@ func main() {
 
 	repo := repository.NewPropertyRepo(pg, lg.Named("repo"))
 
+	/* ---------- wait for dependencies ---------- */
+	// Wait for address service to be available
+	addrTarget := cfg.GetServiceGRPCAddress("address")
+	if err := waitForService(addrTarget, "address-svc", lg, 30*time.Second); err != nil {
+		lg.Fatal("address service not available", zap.Error(err))
+	}
+
+	/* ---------- dial a address-svc ---------- */
+	lg.Info("attempting to connect to address service", zap.String("target", addrTarget))
+
+	addrConn, err := rcgrpc.Dial(addrTarget) // helper con timeout & keep-alive
+	if err != nil {
+		lg.Fatal("dial address-svc failed", zap.String("target", addrTarget), zap.Error(err))
+	}
+	defer addrConn.Close()
+
+	lg.Info("successfully connected to address service")
+
 	/* ---------- servicio de dominio ---------- */
-	svc := services.New(repo, lg)
+	svc := services.New(repo, addrConn, lg)
 	ctrl := controller.New(svc)
 
 	/* ---------- HTTP ---------- */
