@@ -1,0 +1,1007 @@
+{
+  "info": {
+    "name": "Organization Service API",
+    "description": "Comprehensive test collection for Organization Service API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "org-svc-collection-v1",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "item": [
+    {
+      "name": "🏢 Organizations",
+      "description": "Organization management endpoints",
+      "item": [
+        {
+          "name": "Create Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store organization ID for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('org_id', response.id);",
+                  "    pm.environment.set('org_slug', response.slug);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Real Estate Company\",\n  \"display_name\": \"Real Estate Company - Premium Division\",\n  \"slug\": \"real-estate-premium\",\n  \"description\": \"Leading real estate services in the metropolitan area\",\n  \"type\": \"real_estate\",\n  \"legal_name\": \"Real Estate Company Inc.\",\n  \"tax_id\": \"12-3456789\",\n  \"website\": \"https://realestate-premium.com\",\n  \"phone\": \"+1-555-0123\",\n  \"email\": \"contact@realestate-premium.com\",\n  \"logo_url\": \"https://cdn.realestate-premium.com/logo.png\",\n  \"timezone_id\": \"America/New_York\",\n  \"metadata\": {\n    \"source\": \"postman_test\",\n    \"created_via\": \"api\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"]
+            }
+          }
+        },
+        {
+          "name": "Get Organization by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations?page=1&per_page=10&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Real Estate Company\",\n  \"display_name\": \"Updated Real Estate Company - Elite Division\",\n  \"description\": \"Premier real estate services with updated vision\",\n  \"website\": \"https://updated-realestate.com\",\n  \"phone\": \"+1-555-9999\",\n  \"email\": \"info@updated-realestate.com\",\n  \"timezone_id\": \"America/Los_Angeles\",\n  \"metadata\": {\n    \"source\": \"postman_update\",\n    \"updated_via\": \"api\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Organization Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Organization Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settings\": {\n    \"max_employees\": 100,\n    \"allow_public_listings\": true,\n    \"default_commission_rate\": 3.5,\n    \"working_hours\": {\n      \"start\": \"09:00\",\n      \"end\": \"18:00\",\n      \"timezone\": \"America/New_York\"\n    },\n    \"notifications\": {\n      \"email_enabled\": true,\n      \"sms_enabled\": false\n    }\n  },\n  \"metadata\": {\n    \"updated_via\": \"postman\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Delete Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Employees",
+      "description": "Employee management endpoints",
+      "item": [
+        {
+          "name": "Add Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store employee ID for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('employee_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{test_user_id}}\",\n  \"person_id\": \"{{test_person_id}}\",\n  \"primary_role_id\": \"{{agent_role_id}}\",\n  \"role_ids\": [\"{{agent_role_id}}\"],\n  \"hired_at\": \"2024-01-15\",\n  \"status\": \"active\",\n  \"metadata\": {\n    \"department\": \"sales\",\n    \"hire_source\": \"referral\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees"]
+            }
+          }
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees?page=1&per_page=10&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"person_id\": \"{{updated_person_id}}\",\n  \"primary_role_id\": \"{{manager_role_id}}\",\n  \"metadata\": {\n    \"department\": \"management\",\n    \"promotion_date\": \"2024-06-01\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Employee Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\",\n  \"reason\": \"temporary_leave\",\n  \"metadata\": {\n    \"leave_type\": \"medical\",\n    \"expected_return\": \"2024-12-01\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get Employee Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Assign Role to Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_id\": \"{{secondary_role_id}}\",\n  \"is_primary\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}/roles/{{secondary_role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}", "roles", "{{secondary_role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Remove Role from Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/employees/{{employee_id}}/roles/{{secondary_role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "employees", "{{employee_id}}", "roles", "{{secondary_role_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎭 Roles",
+      "description": "Role management endpoints",
+      "item": [
+        {
+          "name": "Create Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store role ID for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('custom_role_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Agent\",\n  \"description\": \"Senior real estate agent with advanced permissions\",\n  \"metadata\": {\n    \"level\": \"senior\",\n    \"department\": \"sales\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Get Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/roles/{{custom_role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "roles", "{{custom_role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/roles?include_default=true",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "roles"],
+              "query": [
+                {
+                  "key": "include_default",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lead Senior Agent\",\n  \"description\": \"Lead senior agent with team management responsibilities\",\n  \"metadata\": {\n    \"level\": \"lead\",\n    \"department\": \"sales\",\n    \"team_lead\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/roles/{{custom_role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "roles", "{{custom_role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/roles/{{custom_role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "roles", "{{custom_role_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Branches",
+      "description": "Branch management endpoints",
+      "item": [
+        {
+          "name": "Create Branch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store branch ID for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('branch_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Downtown Office\",\n  \"address_id\": \"{{test_address_id}}\",\n  \"phone\": \"+1-555-0101\",\n  \"email\": \"downtown@realestate-premium.com\",\n  \"is_main\": false,\n  \"metadata\": {\n    \"office_type\": \"sales\",\n    \"capacity\": 25\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/branches",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "branches"]
+            }
+          }
+        },
+        {
+          "name": "Get Branch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/branches/{{branch_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "branches", "{{branch_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Branches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/branches?include_main=true",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "branches"],
+              "query": [
+                {
+                  "key": "include_main",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Branch",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Updated Downtown Office\",\n  \"phone\": \"+1-555-0202\",\n  \"email\": \"new-downtown@realestate-premium.com\",\n  \"metadata\": {\n    \"office_type\": \"full_service\",\n    \"capacity\": 30,\n    \"renovated\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/branches/{{branch_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "branches", "{{branch_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Branch",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/branches/{{branch_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "branches", "{{branch_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Owners",
+      "description": "Organization owner management endpoints",
+      "item": [
+        {
+          "name": "Add Owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store owner ID for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('owner_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"person_id\": \"{{test_person_id}}\",\n  \"user_id\": \"{{test_user_id}}\",\n  \"is_founder\": false,\n  \"ownership_pct\": 25.5,\n  \"metadata\": {\n    \"investment_date\": \"2024-01-01\",\n    \"investment_amount\": 250000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/owners",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "owners"]
+            }
+          }
+        },
+        {
+          "name": "Get Owner",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/owners/{{owner_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "owners", "{{owner_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Owners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/owners?include_founders=true",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "owners"],
+              "query": [
+                {
+                  "key": "include_founders",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Owner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_founder\": true,\n  \"ownership_pct\": 51.0,\n  \"metadata\": {\n    \"promotion_date\": \"2024-06-01\",\n    \"new_role\": \"co_founder\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/owners/{{owner_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "owners", "{{owner_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📧 Invitations",
+      "description": "Organization invitation endpoints",
+      "item": [
+        {
+          "name": "Send Invitation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Store invitation details for other tests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('invitation_id', response.id);",
+                  "    pm.environment.set('invitation_token', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invitee_email\": \"newemployee@realestate-premium.com\",\n  \"invitee_person_id\": \"{{new_person_id}}\",\n  \"role_id\": \"{{agent_role_id}}\",\n  \"branch_id\": \"{{branch_id}}\",\n  \"expires_at\": \"2024-12-31T23:59:59Z\",\n  \"personal_message\": \"Welcome to our team! We're excited to have you join us.\",\n  \"metadata\": {\n    \"invitation_source\": \"hr_system\",\n    \"department\": \"sales\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations"]
+            }
+          }
+        },
+        {
+          "name": "Get Invitation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations/{{invitation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations", "{{invitation_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations?status=pending&page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate Invitation Token (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invitations/validate/{{invitation_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "validate", "{{invitation_token}}"]
+            }
+          }
+        },
+        {
+          "name": "Accept Invitation (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"person_data\": {\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"newemployee@realestate-premium.com\",\n    \"phone\": \"+1-555-1234\"\n  },\n  \"user_data\": {\n    \"username\": \"johndoe\",\n    \"password\": \"SecurePassword123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations/accept/{{invitation_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "accept", "{{invitation_token}}"]
+            }
+          }
+        },
+        {
+          "name": "Decline Invitation (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Found another opportunity\",\n  \"metadata\": {\n    \"decline_source\": \"web\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations/decline/{{invitation_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "decline", "{{invitation_token}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations/{{invitation_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations", "{{invitation_id}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Resend Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations/{{invitation_id}}/resend",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations", "{{invitation_id}}", "resend"]
+            }
+          }
+        },
+        {
+          "name": "Get Invitation Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{org_id}}/invitations/{{invitation_id}}/logs",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{org_id}}", "invitations", "{{invitation_id}}", "logs"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Running request to:', pm.request.url);",
+          "",
+          "// Validate required environment variables",
+          "const requiredVars = ['base_url', 'jwt_token'];",
+          "const missingVars = requiredVars.filter(varName => !pm.environment.get(varName));",
+          "",
+          "if (missingVars.length > 0) {",
+          "    console.warn('Missing required environment variables:', missingVars);",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has correct content type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "// Log response details for debugging",
+          "console.log('Response status:', pm.response.status);",
+          "console.log('Response time:', pm.response.responseTime, 'ms');"
+        ]
+      }
+    }
+  ]
+}
