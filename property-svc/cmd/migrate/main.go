@@ -11,6 +11,12 @@ import (
 func main() {
 	// Carga las REM_* definidas en .env
 	cfg := config.Load()
+
+	// Asegurar que el nombre del servicio esté establecido
+	if cfg.ServiceName == "" {
+		cfg.ServiceName = "property"
+	}
+
 	lg := logger.New(cfg.Logger, "property-migrate")
 
 	// Conectar a base de datos

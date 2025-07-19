@@ -1,269 +1,240 @@
-package controller
+package controllers
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-
+	"github.com/google/uuid"
 	"github.com/rem-gestion/api-suite/property/src/dto"
 	"github.com/rem-gestion/api-suite/property/src/services"
-	rerrors "github.com/rem-gestion/rem-common/errors"
+	"github.com/rem-gestion/rem-common/errors"
 )
 
-type Ctrl struct{ svc *services.PropertyService }
-
-func New(s *services.PropertyService) *Ctrl { return &Ctrl{s} }
-
-/* ───────────────────── Properties ────────────────────── */
-
-// POST /properties
-func (c *Ctrl) CreateProperty(ctx *gin.Context) {
-	var in dto.CreatePropertyDTO
-	if err := ctx.ShouldBindJSON(&in); err != nil {
-		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
-		return
-	}
-	out, err := c.svc.CreateProperty(ctx.Request.Context(), in)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusCreated, out)
+type PropertyController struct {
+	service *services.PropertyService
 }
 
-// GET /properties/:id
-func (c *Ctrl) GetProperty(ctx *gin.Context) {
-	p, err := c.svc.GetProperty(ctx.Request.Context(), ctx.Param("id"))
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusOK, p)
+func NewPropertyController(service *services.PropertyService) *PropertyController {
+	return &PropertyController{service: service}
 }
 
-// GET /properties?page=&per_page=&search=&type=&owner_person_id=
-func (c *Ctrl) ListProperties(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	per, _ := strconv.Atoi(ctx.DefaultQuery("per_page", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if per < 1 || per > 100 {
-		per = 20
+func (c *PropertyController) Create(ctx *gin.Context) {
+	var req dto.PropertyCreate
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: err.Error()})
+		return
 	}
 
-	search := ctx.Query("search")
-	propertyTypeIDStr := ctx.Query("property_type_id")
-	ownerPersonID := ctx.Query("owner_person_id")
-
-	var propertyTypeID *int
-	if propertyTypeIDStr != "" {
-		if id, err := strconv.Atoi(propertyTypeIDStr); err == nil {
-			propertyTypeID = &id
+	// Get user ID from context (set by auth middleware)
+	var createdBy *uuid.UUID
+	if userID, exists := ctx.Get("user_id"); exists {
+		if uid, ok := userID.(uuid.UUID); ok {
+			createdBy = &uid
 		}
 	}
-	var ownerID *string
-	if ownerPersonID != "" {
-		ownerID = &ownerPersonID
-	}
 
-	limit := per
-	offset := (page - 1) * per
-
-	list, total, err := c.svc.ListProperties(ctx.Request.Context(), search, propertyTypeID, ownerID, limit, offset)
+	response, err := c.service.Create(req, createdBy)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"data":        list,
-		"total":       total,
-		"page":        page,
-		"per_page":    per,
-		"total_pages": (int(total) + per - 1) / per,
-	})
+	ctx.JSON(http.StatusCreated, response)
 }
 
-// PUT /properties/:id
-func (c *Ctrl) UpdateProperty(ctx *gin.Context) {
-	var in dto.UpdatePropertyDTO
-	if err := ctx.ShouldBindJSON(&in); err != nil {
-		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
+func (c *PropertyController) GetByID(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid UUID format"})
 		return
 	}
-	out, err := c.svc.UpdateProperty(ctx.Request.Context(), ctx.Param("id"), in)
+
+	includeRelations := ctx.Query("include_relations") == "true"
+
+	response, err := c.service.GetByID(id, includeRelations)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, out)
+
+	ctx.JSON(http.StatusOK, response)
 }
 
-// DELETE /properties/:id
-func (c *Ctrl) DeleteProperty(ctx *gin.Context) {
-	err := c.svc.DeleteProperty(ctx.Request.Context(), ctx.Param("id"))
+func (c *PropertyController) GetByInternalCode(ctx *gin.Context) {
+	code := ctx.Param("code")
+	if code == "" {
+		ctx.Error(&errors.BadRequestError{Msg: "internal code is required"})
+		return
+	}
+
+	response, err := c.service.GetByInternalCode(code)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusNoContent, nil)
+
+	ctx.JSON(http.StatusOK, response)
 }
 
-/* ───────────────────── Amenities ────────────────────── */
-
-// POST /amenities
-func (c *Ctrl) CreateAmenity(ctx *gin.Context) {
-	var in dto.CreateAmenityDTO
-	if err := ctx.ShouldBindJSON(&in); err != nil {
-		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
+func (c *PropertyController) List(ctx *gin.Context) {
+	var req dto.PropertyListRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: err.Error()})
 		return
 	}
-	out, err := c.svc.CreateAmenity(ctx.Request.Context(), in)
+
+	// Set defaults
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.Limit == 0 {
+		req.Limit = 20
+	}
+
+	response, err := c.service.List(req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusCreated, out)
+
+	ctx.JSON(http.StatusOK, response)
 }
 
-// GET /amenities/:id
-func (c *Ctrl) GetAmenity(ctx *gin.Context) {
-	a, err := c.svc.GetAmenity(ctx.Request.Context(), ctx.Param("id"))
+func (c *PropertyController) Update(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid UUID format"})
+		return
+	}
+
+	var req dto.PropertyUpdate
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: err.Error()})
+		return
+	}
+
+	// Get user ID from context (set by auth middleware)
+	var updatedBy *uuid.UUID
+	if userID, exists := ctx.Get("user_id"); exists {
+		if uid, ok := userID.(uuid.UUID); ok {
+			updatedBy = &uid
+		}
+	}
+
+	response, err := c.service.Update(id, req, updatedBy)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, a)
+
+	ctx.JSON(http.StatusOK, response)
 }
 
-// GET /amenities?page=&per_page=&search=&category=
-func (c *Ctrl) ListAmenities(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	per, _ := strconv.Atoi(ctx.DefaultQuery("per_page", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if per < 1 || per > 100 {
-		per = 20
+func (c *PropertyController) SoftDelete(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid UUID format"})
+		return
 	}
 
-	search := ctx.Query("search")
-	category := ctx.Query("category")
-
-	var cat *string
-	if category != "" {
-		cat = &category
+	// Get user ID from context (set by auth middleware)
+	var deletedBy uuid.UUID
+	if userID, exists := ctx.Get("user_id"); exists {
+		if uid, ok := userID.(uuid.UUID); ok {
+			deletedBy = uid
+		} else {
+			ctx.Error(&errors.UnauthorizedError{Msg: "user not authenticated"})
+			return
+		}
+	} else {
+		ctx.Error(&errors.UnauthorizedError{Msg: "user not authenticated"})
+		return
 	}
 
-	limit := per
-	offset := (page - 1) * per
-
-	list, total, err := c.svc.ListAmenities(ctx.Request.Context(), search, cat, limit, offset)
+	err = c.service.SoftDelete(id, deletedBy)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"data":        list,
-		"total":       total,
-		"page":        page,
-		"per_page":    per,
-		"total_pages": (int(total) + per - 1) / per,
-	})
+	ctx.Status(http.StatusNoContent)
 }
 
-// PUT /amenities/:id
-func (c *Ctrl) UpdateAmenity(ctx *gin.Context) {
-	var in dto.UpdateAmenityDTO
-	if err := ctx.ShouldBindJSON(&in); err != nil {
-		ctx.Error(&rerrors.BadRequestError{Msg: err.Error()})
+func (c *PropertyController) Delete(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid UUID format"})
 		return
 	}
-	out, err := c.svc.UpdateAmenity(ctx.Request.Context(), ctx.Param("id"), in)
+
+	err = c.service.Delete(id)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, out)
+
+	ctx.Status(http.StatusNoContent)
 }
 
-// DELETE /amenities/:id
-func (c *Ctrl) DeleteAmenity(ctx *gin.Context) {
-	err := c.svc.DeleteAmenity(ctx.Request.Context(), ctx.Param("id"))
+func (c *PropertyController) Search(ctx *gin.Context) {
+	var req dto.PropertySearchRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: err.Error()})
+		return
+	}
+
+	// Set defaults
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.Limit == 0 {
+		req.Limit = 20
+	}
+
+	response, err := c.service.Search(req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusNoContent, nil)
+
+	ctx.JSON(http.StatusOK, response)
 }
 
-/* ───────────────────── Property Amenities Management ────────────────────── */
+func (c *PropertyController) BulkCreate(ctx *gin.Context) {
+	var req dto.BulkPropertyCreateRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: err.Error()})
+		return
+	}
 
-// POST /properties/:property_id/amenities/:amenity_id
-func (c *Ctrl) AddAmenityToProperty(ctx *gin.Context) {
-	propertyID := ctx.Param("property_id")
-	amenityID := ctx.Param("amenity_id")
+	// Get user ID from context (set by auth middleware)
+	var createdBy *uuid.UUID
+	if userID, exists := ctx.Get("user_id"); exists {
+		if uid, ok := userID.(uuid.UUID); ok {
+			createdBy = &uid
+		}
+	}
 
-	err := c.svc.AddAmenityToProperty(ctx.Request.Context(), propertyID, amenityID)
+	response, err := c.service.BulkCreate(req, createdBy)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusCreated, gin.H{"message": "amenity added to property"})
+
+	ctx.JSON(http.StatusCreated, response)
 }
 
-// DELETE /properties/:property_id/amenities/:amenity_id
-func (c *Ctrl) RemoveAmenityFromProperty(ctx *gin.Context) {
-	propertyID := ctx.Param("property_id")
-	amenityID := ctx.Param("amenity_id")
-
-	err := c.svc.RemoveAmenityFromProperty(ctx.Request.Context(), propertyID, amenityID)
+// Utility function to parse int32 from string parameter
+func parseInt32Param(ctx *gin.Context, paramName string) (int32, error) {
+	paramStr := ctx.Param(paramName)
+	param, err := strconv.ParseInt(paramStr, 10, 32)
 	if err != nil {
-		ctx.Error(err)
-		return
+		return 0, &errors.BadRequestError{Msg: "invalid " + paramName + " format"}
 	}
-	ctx.JSON(http.StatusNoContent, nil)
-}
-
-/* ───────────────────── Property-Amenity Relations ────────────────────── */
-
-// GET /properties/:property_id/amenities
-func (c *Ctrl) GetPropertyAmenities(ctx *gin.Context) {
-	propertyID := ctx.Param("property_id")
-
-	amenities, err := c.svc.GetPropertyAmenities(ctx.Request.Context(), propertyID)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": amenities})
-}
-
-/* ───────────────────── Property Types ────────────────────── */
-
-// GET /property-types
-func (c *Ctrl) GetPropertyTypes(ctx *gin.Context) {
-	types, err := c.svc.GetPropertyTypes(ctx.Request.Context())
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": types})
-}
-
-/* ───────────────────── Manager Types ────────────────────── */
-
-// GET /manager-types
-func (c *Ctrl) GetManagerTypes(ctx *gin.Context) {
-	types, err := c.svc.GetManagerTypes(ctx.Request.Context())
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": types})
+	return int32(param), nil
 }

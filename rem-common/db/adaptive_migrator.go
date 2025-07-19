@@ -190,9 +190,10 @@ func (am *AdaptiveMigrator) applyTablePrefixes(sql string) string {
 func (am *AdaptiveMigrator) getServiceTables() []string {
 	// Definir tablas por servicio
 	tables := map[string][]string{
-		"person":  {"person", "individual", "company", "contacto"},
-		"address": {"addresses"},
-		"auth":    {"accounts", "users"},
+		"person":   {"person", "individual", "company", "contacto"},
+		"address":  {"addresses"},
+		"auth":     {"accounts", "users"},
+		"property": {"property", "property_type", "manager_type", "amenity", "property_management", "property_amenities"},
 	}
 
 	if serviceTables, exists := tables[am.config.ServiceName]; exists {

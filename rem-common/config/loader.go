@@ -61,6 +61,9 @@ func detectServiceName() string {
 	if strings.Contains(wd, "auth-identity-svc") {
 		return "auth"
 	}
+	if strings.Contains(wd, "property-svc") {
+		return "property"
+	}
 
 	// 3. Detectar por ejecutable
 	if exe, err := os.Executable(); err == nil {
@@ -73,6 +76,9 @@ func detectServiceName() string {
 		}
 		if strings.Contains(base, "auth") {
 			return "auth"
+		}
+		if strings.Contains(base, "property") {
+			return "property"
 		}
 	}
 

@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,45 +17,15 @@ import (
 	/* ───── rem-common ───── */
 	"github.com/rem-gestion/rem-common/config"
 	"github.com/rem-gestion/rem-common/db"
-	rcgrpc "github.com/rem-gestion/rem-common/grpc"
 	"github.com/rem-gestion/rem-common/logger"
 	mw "github.com/rem-gestion/rem-common/middleware"
 
 	/* ───── capas locales ───── */
-	controller "github.com/rem-gestion/api-suite/property/src/controllers"
+	"github.com/rem-gestion/api-suite/property/src/controllers"
 	"github.com/rem-gestion/api-suite/property/src/repository"
 	"github.com/rem-gestion/api-suite/property/src/router"
 	"github.com/rem-gestion/api-suite/property/src/services"
 )
-
-// waitForService waits for a service to be available at the given address
-func waitForService(address string, serviceName string, lg *zap.Logger, maxWait time.Duration) error {
-	lg.Info("waiting for service to be available",
-		zap.String("service", serviceName),
-		zap.String("address", address),
-		zap.Duration("max_wait", maxWait))
-
-	timeout := time.After(maxWait)
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for %s at %s after %v", serviceName, address, maxWait)
-		case <-ticker.C:
-			conn, err := net.DialTimeout("tcp", address, 2*time.Second)
-			if err == nil {
-				conn.Close()
-				lg.Info("service is available", zap.String("service", serviceName))
-				return nil
-			}
-			lg.Debug("service not yet available",
-				zap.String("service", serviceName),
-				zap.Error(err))
-		}
-	}
-}
 
 func main() {
 	/* ---------- carga de config & logger ---------- */
@@ -84,29 +53,36 @@ func main() {
 		lg.Fatal("postgres connect failed", zap.Error(err))
 	}
 
-	repo := repository.NewPropertyRepo(pg, lg.Named("repo"))
+	/* ---------- repositories ---------- */
+	propertyRepo := repository.NewPropertyRepo(pg, lg)
+	propertyTypeRepo := repository.NewPropertyTypeRepo(pg, lg)
+	managerTypeRepo := repository.NewManagerTypeRepo(pg, lg)
+	amenityRepo := repository.NewAmenityRepo(pg, lg)
+	propertyManagementRepo := repository.NewPropertyManagementRepo(pg, lg)
+	propertyAmenityRepo := repository.NewPropertyAmenityRepo(pg, lg)
 
-	/* ---------- wait for dependencies ---------- */
-	// Wait for address service to be available
-	addrTarget := cfg.GetServiceGRPCAddress("address")
-	if err := waitForService(addrTarget, "address-svc", lg, 30*time.Second); err != nil {
-		lg.Fatal("address service not available", zap.Error(err))
-	}
+	/* ---------- services ---------- */
+	propertyService := services.NewPropertyService(
+		propertyRepo,
+		propertyTypeRepo,
+		propertyManagementRepo,
+		propertyAmenityRepo,
+		lg,
+	)
+	propertyTypeService := services.NewPropertyTypeService(propertyTypeRepo, lg)
+	managerTypeService := services.NewManagerTypeService(managerTypeRepo, lg)
+	amenityService := services.NewAmenityService(amenityRepo, lg)
+	propertyManagementService := services.NewPropertyManagementService(propertyManagementRepo, lg)
 
-	/* ---------- dial a address-svc ---------- */
-	lg.Info("attempting to connect to address service", zap.String("target", addrTarget))
+	/* ---------- controllers ---------- */
+	propertyController := controllers.NewPropertyController(propertyService)
+	propertyTypeController := controllers.NewPropertyTypeController(propertyTypeService)
+	managerTypeController := controllers.NewManagerTypeController(managerTypeService)
+	amenityController := controllers.NewAmenityController(amenityService)
+	propertyManagementController := controllers.NewPropertyManagementController(propertyManagementService)
 
-	addrConn, err := rcgrpc.Dial(addrTarget) // helper con timeout & keep-alive
-	if err != nil {
-		lg.Fatal("dial address-svc failed", zap.String("target", addrTarget), zap.Error(err))
-	}
-	defer addrConn.Close()
-
-	lg.Info("successfully connected to address service")
-
-	/* ---------- servicio de dominio ---------- */
-	svc := services.New(repo, addrConn, lg)
-	ctrl := controller.New(svc)
+	/* ---------- router ---------- */
+	appRouter := router.New(propertyController, propertyTypeController, managerTypeController, amenityController, propertyManagementController)
 
 	/* ---------- HTTP ---------- */
 	gin.SetMode(gin.ReleaseMode)
@@ -123,7 +99,7 @@ func main() {
 		mw.RecoveryWithZap(lg),
 		mw.ErrorHandler(),
 	)
-	router.Setup(r, ctrl) // /properties, /amenities...
+	appRouter.SetupRoutes(r) // /properties, /amenities...
 
 	httpSrv := &http.Server{Addr: fmt.Sprintf(":%d", serverPort), Handler: r}
 

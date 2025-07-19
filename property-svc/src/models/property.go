@@ -7,108 +7,123 @@ import (
 	"gorm.io/gorm"
 )
 
-// ---- Type tables ----
+// AmenityCategory enum type
+type AmenityCategory string
+
+const (
+	AmenityCategoryGeneral      AmenityCategory = "general"
+	AmenityCategoryServices     AmenityCategory = "services"
+	AmenityCategoryEnvironments AmenityCategory = "environments"
+	AmenityCategorySecurity     AmenityCategory = "security"
+	AmenityCategoryComfort      AmenityCategory = "comfort"
+)
+
+// PropertyType model - catalog of property types
 type PropertyType struct {
-	ID          int       `gorm:"primaryKey;autoIncrement"`
-	Code        string    `gorm:"size:50;unique;not null"`
-	Name        string    `gorm:"size:100;not null"`
-	Description *string   `gorm:"type:text"`
-	IsActive    bool      `gorm:"not null;default:true"`
-	CreatedAt   time.Time `gorm:"not null;default:now()"`
-	UpdatedAt   *time.Time
+	ID          int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Code        string     `gorm:"size:32;unique;not null" json:"code"`
+	Name        string     `gorm:"size:100;not null" json:"name"`
+	Description *string    `gorm:"type:text" json:"description"`
+	IsActive    bool       `gorm:"default:true" json:"is_active"`
+	CreatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
 
 	// Relations
-	Properties []Property `gorm:"foreignKey:PropertyTypeID"`
+	Properties []Property `gorm:"foreignKey:PropertyTypeID" json:"properties,omitempty"`
 }
 
+func (PropertyType) TableName() string { return "property_property_type" }
+
+// ManagerType model - catalog of manager types
 type ManagerType struct {
-	ID          int       `gorm:"primaryKey;autoIncrement"`
-	Code        string    `gorm:"size:50;unique;not null"`
-	Name        string    `gorm:"size:100;not null"`
-	Description *string   `gorm:"type:text"`
-	IsActive    bool      `gorm:"not null;default:true"`
-	CreatedAt   time.Time `gorm:"not null;default:now()"`
-	UpdatedAt   *time.Time
+	ID          int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Code        string     `gorm:"size:32;unique;not null" json:"code"`
+	Name        string     `gorm:"size:100;not null" json:"name"`
+	Description *string    `gorm:"type:text" json:"description"`
+	IsActive    bool       `gorm:"default:true" json:"is_active"`
+	CreatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
 
 	// Relations
-	PropertyManagements []PropertyManagement `gorm:"foreignKey:ManagerTypeID"`
+	PropertyManagements []PropertyManagement `gorm:"foreignKey:ManagerTypeID" json:"property_managements,omitempty"`
 }
 
-// ---- core tables ----
-type Property struct {
-	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	OwnerPersonID  uuid.UUID `gorm:"type:uuid;not null;index"`
-	AddressID      uuid.UUID `gorm:"type:uuid;not null;unique"`
-	PropertyTypeID int       `gorm:"not null;index"`
-	InternalCode   *string   `gorm:"size:50;unique"`
-	YearBuilt      *int
-	Bedrooms       *int
-	Bathrooms      *float32 `gorm:"type:decimal(3,1)"`
-	TotalAreaSqm   *float64 `gorm:"type:decimal(10,2)"`
-	CoveredAreaSqm *float64 `gorm:"type:decimal(10,2)"`
-	Description    *string  `gorm:"type:text"`
+func (ManagerType) TableName() string { return "property_manager_type" }
 
-	CreatedAt time.Time
-	UpdatedAt *time.Time
-	UpdatedBy *uuid.UUID
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-
-	// Relations
-	PropertyType       PropertyType         `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
-	PropertyManagement []PropertyManagement `gorm:"foreignKey:PropertyID"`
-	PropertyAmenities  []PropertyAmenity    `gorm:"foreignKey:PropertyID"`
-}
-
-type PropertyManagement struct {
-	ID                   uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	PropertyID           uuid.UUID  `gorm:"type:uuid;not null;index"`
-	ManagerID            uuid.UUID  `gorm:"type:uuid;not null;index"`
-	ManagerTypeID        int        `gorm:"not null;index"`
-	StartDate            time.Time  `gorm:"type:date;not null"`
-	EndDate              *time.Time `gorm:"type:date"`
-	CommissionPercentage *float64   `gorm:"type:decimal(5,2)"`
-
-	CreatedAt time.Time
-	UpdatedAt *time.Time
-	UpdatedBy *uuid.UUID
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-
-	// Relations
-	Property    Property    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	ManagerType ManagerType `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
-}
-
+// Amenity model - catalog of amenities
 type Amenity struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	Name        string    `gorm:"size:100;not null;unique"`
-	Description *string   `gorm:"type:text"`
-	Icon        *string   `gorm:"size:50"`
-	Category    *string   `gorm:"size:50"`
-
-	CreatedAt time.Time
-	UpdatedAt *time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	ID       int32            `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name     string           `gorm:"size:100;unique;not null" json:"name"`
+	Category *AmenityCategory `gorm:"type:amenity_category" json:"category"`
+	IconURL  *string          `gorm:"type:text" json:"icon_url"`
 
 	// Relations
-	PropertyAmenities []PropertyAmenity `gorm:"foreignKey:AmenityID"`
+	PropertyAmenities []PropertyAmenity `gorm:"foreignKey:AmenityID" json:"property_amenities,omitempty"`
 }
 
+func (Amenity) TableName() string { return "property_amenity" }
+
+// Property model - main property entity
+type Property struct {
+	ID             uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	OwnerPersonID  uuid.UUID      `gorm:"type:uuid;not null" json:"owner_person_id"`
+	AddressID      uuid.UUID      `gorm:"type:uuid;unique;not null" json:"address_id"`
+	PropertyTypeID int32          `gorm:"not null" json:"property_type_id"`
+	InternalCode   *string        `gorm:"size:50" json:"internal_code"`
+	YearBuilt      *int32         `json:"year_built"`
+	Bedrooms       *int32         `json:"bedrooms"`
+	Bathrooms      *float32       `gorm:"type:decimal(3,1)" json:"bathrooms"`
+	TotalAreaSqm   *float64       `gorm:"type:decimal(10,2)" json:"total_area_sqm"`
+	CoveredAreaSqm *float64       `gorm:"type:decimal(10,2)" json:"covered_area_sqm"`
+	Description    *string        `gorm:"type:text" json:"description"`
+	CreatedAt      time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt      *time.Time     `json:"updated_at"`
+	UpdatedBy      *uuid.UUID     `gorm:"type:uuid" json:"updated_by"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// Relations
+	PropertyType        PropertyType         `gorm:"foreignKey:PropertyTypeID" json:"property_type,omitempty"`
+	PropertyManagements []PropertyManagement `gorm:"foreignKey:PropertyID" json:"property_managements,omitempty"`
+	PropertyAmenities   []PropertyAmenity    `gorm:"foreignKey:PropertyID" json:"property_amenities,omitempty"`
+}
+
+func (Property) TableName() string { return "property_property" }
+
+// PropertyManagement model - manages who handles the property
+type PropertyManagement struct {
+	ID                   uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	PropertyID           uuid.UUID      `gorm:"type:uuid;not null" json:"property_id"`
+	ManagerID            uuid.UUID      `gorm:"type:uuid;not null" json:"manager_id"`
+	ManagerTypeID        int32          `gorm:"not null" json:"manager_type_id"`
+	StartDate            time.Time      `gorm:"type:date;not null" json:"start_date"`
+	EndDate              *time.Time     `gorm:"type:date" json:"end_date"`
+	CommissionPercentage *float64       `gorm:"type:decimal(5,2)" json:"commission_percentage"`
+	CreatedAt            time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt            *time.Time     `json:"updated_at"`
+	UpdatedBy            *uuid.UUID     `gorm:"type:uuid" json:"updated_by"`
+	DeletedAt            gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// Relations
+	Property    Property    `gorm:"foreignKey:PropertyID" json:"property,omitempty"`
+	ManagerType ManagerType `gorm:"foreignKey:ManagerTypeID" json:"manager_type,omitempty"`
+}
+
+func (PropertyManagement) TableName() string { return "property_property_management" }
+
+// PropertyAmenity model - junction table for property amenities
 type PropertyAmenity struct {
-	ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	PropertyID uuid.UUID `gorm:"type:uuid;not null;index"`
-	AmenityID  uuid.UUID `gorm:"type:uuid;not null;index"`
-
-	CreatedAt time.Time
+	PropertyID uuid.UUID `gorm:"type:uuid;not null;primaryKey" json:"property_id"`
+	AmenityID  string    `gorm:"type:jsonb;not null;primaryKey" json:"amenity_id"` // Using string to handle JSONB
+	Note       *string   `gorm:"type:text" json:"note"`
 
 	// Relations
-	Property Property `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Amenity  Amenity  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Property Property `gorm:"foreignKey:PropertyID" json:"property,omitempty"`
 }
 
-// Table names
-func (PropertyType) TableName() string       { return "property_type" }
-func (ManagerType) TableName() string        { return "manager_type" }
-func (Property) TableName() string           { return "property" }
-func (PropertyManagement) TableName() string { return "property_management" }
-func (Amenity) TableName() string            { return "amenity" }
-func (PropertyAmenity) TableName() string    { return "property_amenities" }
+func (PropertyAmenity) TableName() string { return "property_property_amenities" }
+
+// Custom composite primary key for PropertyAmenity
+func (PropertyAmenity) BeforeCreate(tx *gorm.DB) error {
+	// Any validation logic can go here
+	return nil
+}

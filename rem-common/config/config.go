@@ -87,6 +87,11 @@ type PersonGRPCConfig struct {
 	Port int    `envconfig:"REM_PERSON_GRPC_PORT" default:"50053"`
 }
 
+type PropertyGRPCConfig struct {
+	Host string `envconfig:"REM_PROPERTY_GRPC_HOST" default:"0.0.0.0"`
+	Port int    `envconfig:"REM_PROPERTY_GRPC_PORT" default:"50054"`
+}
+
 type AddressServiceConfig struct {
 	Host string `envconfig:"REM_ADDRESS_HOST" default:"127.0.0.1"`
 	Port int    `envconfig:"REM_ADDRESS_PORT" default:"50051"`
@@ -95,6 +100,11 @@ type AddressServiceConfig struct {
 type PersonServiceConfig struct {
 	Host string `envconfig:"REM_PERSON_HOST" default:"127.0.0.1"`
 	Port int    `envconfig:"REM_PERSON_PORT" default:"50052"`
+}
+
+type PropertyServiceConfig struct {
+	Host string `envconfig:"REM_PROPERTY_HOST" default:"127.0.0.1"`
+	Port int    `envconfig:"REM_PROPERTY_PORT" default:"50054"`
 }
 
 type AuthServerConfig struct {
@@ -107,6 +117,10 @@ type AddressServerConfig struct {
 
 type PersonServerConfig struct {
 	Port int `envconfig:"REM_PERSON_HTTP_PORT" default:"4019"`
+}
+
+type PropertyServerConfig struct {
+	Port int `envconfig:"REM_PROPERTY_HTTP_PORT" default:"4023"`
 }
 
 type Config struct {
@@ -122,18 +136,21 @@ type Config struct {
 	Redis            RedisConfig
 	Rabbit           RabbitConfig
 
-	GRPC        GRPCConfig        // Configuración gRPC genérica (para compatibilidad)
-	AuthGRPC    AuthGRPCConfig    // Configuración gRPC específica para Auth
-	AddressGRPC AddressGRPCConfig // Configuración gRPC específica para Address
-	PersonGRPC  PersonGRPCConfig  // Configuración gRPC específica para Person
+	GRPC         GRPCConfig         // Configuración gRPC genérica (para compatibilidad)
+	AuthGRPC     AuthGRPCConfig     // Configuración gRPC específica para Auth
+	AddressGRPC  AddressGRPCConfig  // Configuración gRPC específica para Address
+	PersonGRPC   PersonGRPCConfig   // Configuración gRPC específica para Person
+	PropertyGRPC PropertyGRPCConfig // Configuración gRPC específica para Property
 
-	Server        ServerConfig        // Configuración HTTP genérica (para compatibilidad)
-	AuthServer    AuthServerConfig    // Configuración HTTP específica para Auth
-	AddressServer AddressServerConfig // Configuración HTTP específica para Address
-	PersonServer  PersonServerConfig  // Configuración HTTP específica para Person
+	Server         ServerConfig         // Configuración HTTP genérica (para compatibilidad)
+	AuthServer     AuthServerConfig     // Configuración HTTP específica para Auth
+	AddressServer  AddressServerConfig  // Configuración HTTP específica para Address
+	PersonServer   PersonServerConfig   // Configuración HTTP específica para Person
+	PropertyServer PropertyServerConfig // Configuración HTTP específica para Property
 
-	Address AddressServiceConfig
-	Person  PersonServiceConfig
+	Address  AddressServiceConfig
+	Person   PersonServiceConfig
+	Property PropertyServiceConfig
 
 	Logger LoggerConfig
 	APIKey string `envconfig:"REM_API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
@@ -148,6 +165,8 @@ func (c *Config) GetGRPCConfig() (string, int) {
 		return c.AddressGRPC.Host, c.AddressGRPC.Port
 	case "person":
 		return c.PersonGRPC.Host, c.PersonGRPC.Port
+	case "property":
+		return c.PropertyGRPC.Host, c.PropertyGRPC.Port
 	default:
 		// Fallback a configuración genérica
 		return c.GRPC.Host, c.GRPC.Port
@@ -169,6 +188,8 @@ func (c *Config) GetServerPort() int {
 		return c.AddressServer.Port
 	case "person":
 		return c.PersonServer.Port
+	case "property":
+		return c.PropertyServer.Port
 	default:
 		// Fallback a configuración genérica
 		return c.Server.Port
@@ -184,13 +205,18 @@ func (c *Config) GetServiceGRPCAddress(serviceName string) string {
 		return fmt.Sprintf("%s:%d", c.AddressGRPC.Host, c.AddressGRPC.Port)
 	case "person":
 		return fmt.Sprintf("%s:%d", c.PersonGRPC.Host, c.PersonGRPC.Port)
+	case "property":
+		return fmt.Sprintf("%s:%d", c.PropertyGRPC.Host, c.PropertyGRPC.Port)
 	default:
-		// Fallback para Address y Person legacy configs
+		// Fallback para legacy configs
 		if serviceName == "address-svc" {
 			return fmt.Sprintf("%s:%d", c.Address.Host, c.Address.Port)
 		}
 		if serviceName == "person-svc" {
 			return fmt.Sprintf("%s:%d", c.Person.Host, c.Person.Port)
+		}
+		if serviceName == "property-svc" {
+			return fmt.Sprintf("%s:%d", c.Property.Host, c.Property.Port)
 		}
 		return fmt.Sprintf("%s:%d", c.GRPC.Host, c.GRPC.Port)
 	}

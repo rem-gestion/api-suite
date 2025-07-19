@@ -2,47 +2,90 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	controller "github.com/rem-gestion/api-suite/property/src/controllers"
+	"github.com/rem-gestion/api-suite/property/src/controllers"
+	"github.com/rem-gestion/rem-common/middleware"
 )
 
-func Setup(r *gin.Engine, ctrl *controller.Ctrl) {
-	// API Gateway enrutará /api/properties/ a este servicio
-	// Por lo tanto, usamos "/" como base para evitar duplicación
+type Router struct {
+	propertyController           *controllers.PropertyController
+	propertyTypeController       *controllers.PropertyTypeController
+	managerTypeController        *controllers.ManagerTypeController
+	amenityController            *controllers.AmenityController
+	propertyManagementController *controllers.PropertyManagementController
+}
 
-	// Properties
-	r.POST("/", ctrl.CreateProperty)
-	r.GET("/", ctrl.ListProperties)
-	r.GET("/:id", ctrl.GetProperty)
-	r.PUT("/:id", ctrl.UpdateProperty)
-	r.DELETE("/:id", ctrl.DeleteProperty)
+func New(
+	propertyController *controllers.PropertyController,
+	propertyTypeController *controllers.PropertyTypeController,
+	managerTypeController *controllers.ManagerTypeController,
+	amenityController *controllers.AmenityController,
+	propertyManagementController *controllers.PropertyManagementController,
+) *Router {
+	return &Router{
+		propertyController:           propertyController,
+		propertyTypeController:       propertyTypeController,
+		managerTypeController:        managerTypeController,
+		amenityController:            amenityController,
+		propertyManagementController: propertyManagementController,
+	}
+}
 
-	// Property Types (master data)
-	r.GET("/property-types", ctrl.GetPropertyTypes)
+func (r *Router) SetupRoutes(engine *gin.Engine) {
+	// Middleware setup
+	engine.Use(middleware.ErrorHandler())
 
-	// Manager Types (master data)
-	r.GET("/manager-types", ctrl.GetManagerTypes)
-
-	// Property-specific endpoints (use different pattern to avoid conflicts)
-	properties := r.Group("/properties")
+	// Property routes
+	properties := engine.Group("/properties")
 	{
-		// Property-Amenity Relations
-		properties.GET("/:property_id/amenities", ctrl.GetPropertyAmenities)
+		properties.POST("", r.propertyController.Create)
+		properties.GET("", r.propertyController.List)
+		properties.GET("/search", r.propertyController.Search)
+		properties.POST("/bulk", r.propertyController.BulkCreate)
+		properties.GET("/:id", r.propertyController.GetByID)
+		properties.PUT("/:id", r.propertyController.Update)
+		properties.DELETE("/:id", r.propertyController.SoftDelete)
+		properties.DELETE("/:id/permanent", r.propertyController.Delete)
+		properties.GET("/internal-code/:code", r.propertyController.GetByInternalCode)
 	}
 
-	// Property-Amenity management - using /manage prefix to avoid route conflicts
-	manage := r.Group("/manage")
+	// Property Type routes (catalog)
+	propertyTypes := engine.Group("/property-types")
 	{
-		manage.POST("/:property_id/amenities/:amenity_id", ctrl.AddAmenityToProperty)
-		manage.DELETE("/:property_id/amenities/:amenity_id", ctrl.RemoveAmenityFromProperty)
+		propertyTypes.POST("", r.propertyTypeController.Create)
+		propertyTypes.GET("", r.propertyTypeController.List)
+		propertyTypes.GET("/:id", r.propertyTypeController.GetByID)
+		propertyTypes.PUT("/:id", r.propertyTypeController.Update)
+		propertyTypes.DELETE("/:id", r.propertyTypeController.Delete)
+		propertyTypes.GET("/code/:code", r.propertyTypeController.GetByCode)
 	}
 
-	// Amenities management (using /api/amenities/ route from gateway)
-	amenities := r.Group("/amenities")
+	// Manager Type routes (catalog)
+	managerTypes := engine.Group("/manager-types")
 	{
-		amenities.POST("/", ctrl.CreateAmenity)
-		amenities.GET("/", ctrl.ListAmenities)
-		amenities.GET("/:id", ctrl.GetAmenity)
-		amenities.PUT("/:id", ctrl.UpdateAmenity)
-		amenities.DELETE("/:id", ctrl.DeleteAmenity)
+		managerTypes.POST("", r.managerTypeController.Create)
+		managerTypes.GET("", r.managerTypeController.List)
+		managerTypes.GET("/:id", r.managerTypeController.GetByID)
+		managerTypes.PUT("/:id", r.managerTypeController.Update)
+		managerTypes.DELETE("/:id", r.managerTypeController.Delete)
+	}
+
+	// Amenity routes (catalog)
+	amenities := engine.Group("/amenities")
+	{
+		amenities.POST("", r.amenityController.Create)
+		amenities.GET("", r.amenityController.List)
+		amenities.GET("/:id", r.amenityController.GetByID)
+		amenities.PUT("/:id", r.amenityController.Update)
+		amenities.DELETE("/:id", r.amenityController.Delete)
+	}
+
+	// Property Management routes
+	propertyManagements := engine.Group("/property-managements")
+	{
+		propertyManagements.POST("", r.propertyManagementController.Create)
+		propertyManagements.GET("", r.propertyManagementController.List)
+		propertyManagements.GET("/:id", r.propertyManagementController.GetByID)
+		propertyManagements.PUT("/:id", r.propertyManagementController.Update)
+		propertyManagements.DELETE("/:id", r.propertyManagementController.Delete)
 	}
 }

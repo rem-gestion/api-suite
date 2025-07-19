@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package property;
+
+option go_package = "github.com/rem-gestion/api-suite/property/src/grpc/pb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// Property Service
+service PropertyService {
+  rpc CreateProperty(CreatePropertyRequest) returns (PropertyResponse);
+  rpc GetProperty(GetPropertyRequest) returns (PropertyResponse);
+  rpc UpdateProperty(UpdatePropertyRequest) returns (PropertyResponse);
+  rpc DeleteProperty(DeletePropertyRequest) returns (DeletePropertyResponse);
+  rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse);
+  rpc SearchProperties(SearchPropertiesRequest) returns (ListPropertiesResponse);
+}
+
+// PropertyType Service
+service PropertyTypeService {
+  rpc CreatePropertyType(CreatePropertyTypeRequest) returns (PropertyTypeResponse);
+  rpc GetPropertyType(GetPropertyTypeRequest) returns (PropertyTypeResponse);
+  rpc ListPropertyTypes(ListPropertyTypesRequest) returns (ListPropertyTypesResponse);
+}
+
+// PropertyManagement Service
+service PropertyManagementService {
+  rpc CreatePropertyManagement(CreatePropertyManagementRequest) returns (PropertyManagementResponse);
+  rpc GetPropertyManagement(GetPropertyManagementRequest) returns (PropertyManagementResponse);
+  rpc ListPropertyManagements(ListPropertyManagementsRequest) returns (ListPropertyManagementsResponse);
+}
+
+// Messages
+message CreatePropertyRequest {
+  string internal_code = 1;
+  int32 property_type_id = 2;
+  string owner_person_id = 3;
+  google.protobuf.StringValue title = 4;
+  google.protobuf.StringValue description = 5;
+  google.protobuf.Int32Value year_built = 6;
+  google.protobuf.Int32Value bedrooms = 7;
+  google.protobuf.Int32Value bathrooms = 8;
+  google.protobuf.DoubleValue total_area = 9;
+  google.protobuf.DoubleValue built_area = 10;
+  google.protobuf.BoolValue has_garage = 11;
+  google.protobuf.StringValue address_id = 12;
+}
+
+message GetPropertyRequest {
+  string id = 1;
+}
+
+message UpdatePropertyRequest {
+  string id = 1;
+  google.protobuf.StringValue title = 2;
+  google.protobuf.StringValue description = 3;
+  google.protobuf.Int32Value year_built = 4;
+  google.protobuf.Int32Value bedrooms = 5;
+  google.protobuf.Int32Value bathrooms = 6;
+  google.protobuf.DoubleValue total_area = 7;
+  google.protobuf.DoubleValue built_area = 8;
+  google.protobuf.BoolValue has_garage = 9;
+  google.protobuf.StringValue address_id = 10;
+}
+
+message DeletePropertyRequest {
+  string id = 1;
+}
+
+message DeletePropertyResponse {
+  bool success = 1;
+}
+
+message ListPropertiesRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  google.protobuf.StringValue owner_person_id = 3;
+  google.protobuf.Int32Value property_type_id = 4;
+}
+
+message SearchPropertiesRequest {
+  string query = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  google.protobuf.Int32Value bedrooms = 4;
+  google.protobuf.Int32Value bathrooms = 5;
+}
+
+message PropertyResponse {
+  string id = 1;
+  string internal_code = 2;
+  int32 property_type_id = 3;
+  string owner_person_id = 4;
+  string title = 5;
+  string description = 6;
+  int32 year_built = 7;
+  int32 bedrooms = 8;
+  int32 bathrooms = 9;
+  double total_area = 10;
+  double built_area = 11;
+  bool has_garage = 12;
+  string address_id = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  PropertyTypeResponse property_type = 16;
+}
+
+message ListPropertiesResponse {
+  repeated PropertyResponse properties = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+// PropertyType messages
+message CreatePropertyTypeRequest {
+  string code = 1;
+  string name = 2;
+  google.protobuf.StringValue description = 3;
+}
+
+message GetPropertyTypeRequest {
+  int32 id = 1;
+}
+
+message ListPropertyTypesRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PropertyTypeResponse {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  bool is_active = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListPropertyTypesResponse {
+  repeated PropertyTypeResponse property_types = 1;
+  int64 total = 2;
+}
+
+// PropertyManagement messages
+message CreatePropertyManagementRequest {
+  string property_id = 1;
+  int32 manager_type_id = 2;
+  string manager_person_id = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+  google.protobuf.DoubleValue commission_percentage = 6;
+}
+
+message GetPropertyManagementRequest {
+  string id = 1;
+}
+
+message ListPropertyManagementsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  google.protobuf.StringValue property_id = 3;
+}
+
+message PropertyManagementResponse {
+  string id = 1;
+  string property_id = 2;
+  string manager_id = 3;
+  int32 manager_type_id = 4;
+  google.protobuf.Timestamp start_date = 5;
+  google.protobuf.Timestamp end_date = 6;
+  double commission_percentage = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ListPropertyManagementsResponse {
+  repeated PropertyManagementResponse property_managements = 1;
+  int64 total = 2;
+}
