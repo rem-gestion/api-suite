@@ -64,6 +64,9 @@ func detectServiceName() string {
 	if strings.Contains(wd, "property-svc") {
 		return "property"
 	}
+	if strings.Contains(wd, "organization-svc") {
+		return "organization"
+	}
 
 	// 3. Detectar por ejecutable
 	if exe, err := os.Executable(); err == nil {
@@ -79,6 +82,9 @@ func detectServiceName() string {
 		}
 		if strings.Contains(base, "property") {
 			return "property"
+		}
+		if strings.Contains(base, "organization") {
+			return "organization"
 		}
 	}
 

@@ -87,6 +87,11 @@ type PersonGRPCConfig struct {
 	Port int    `envconfig:"REM_PERSON_GRPC_PORT" default:"50053"`
 }
 
+type OrganizationGRPCConfig struct {
+	Host string `envconfig:"REM_ORGANIZATION_GRPC_HOST" default:"0.0.0.0"`
+	Port int    `envconfig:"REM_ORGANIZATION_GRPC_PORT" default:"50054"`
+}
+
 type PropertyGRPCConfig struct {
 	Host string `envconfig:"REM_PROPERTY_GRPC_HOST" default:"0.0.0.0"`
 	Port int    `envconfig:"REM_PROPERTY_GRPC_PORT" default:"50054"`
@@ -100,6 +105,11 @@ type AddressServiceConfig struct {
 type PersonServiceConfig struct {
 	Host string `envconfig:"REM_PERSON_HOST" default:"127.0.0.1"`
 	Port int    `envconfig:"REM_PERSON_PORT" default:"50052"`
+}
+
+type OrganizationServiceConfig struct {
+	Host string `envconfig:"REM_ORGANIZATION_HOST" default:"127.0.0.1"`
+	Port int    `envconfig:"REM_ORGANIZATION_PORT" default:"50054"`
 }
 
 type PropertyServiceConfig struct {
@@ -119,6 +129,10 @@ type PersonServerConfig struct {
 	Port int `envconfig:"REM_PERSON_HTTP_PORT" default:"4019"`
 }
 
+type OrganizationServerConfig struct {
+	Port int `envconfig:"REM_ORGANIZATION_HTTP_PORT" default:"4020"`
+}
+
 type PropertyServerConfig struct {
 	Port int `envconfig:"REM_PROPERTY_HTTP_PORT" default:"4023"`
 }
@@ -136,21 +150,24 @@ type Config struct {
 	Redis            RedisConfig
 	Rabbit           RabbitConfig
 
-	GRPC         GRPCConfig         // Configuración gRPC genérica (para compatibilidad)
-	AuthGRPC     AuthGRPCConfig     // Configuración gRPC específica para Auth
-	AddressGRPC  AddressGRPCConfig  // Configuración gRPC específica para Address
-	PersonGRPC   PersonGRPCConfig   // Configuración gRPC específica para Person
-	PropertyGRPC PropertyGRPCConfig // Configuración gRPC específica para Property
+	GRPC             GRPCConfig             // Configuración gRPC genérica (para compatibilidad)
+	AuthGRPC         AuthGRPCConfig         // Configuración gRPC específica para Auth
+	AddressGRPC      AddressGRPCConfig      // Configuración gRPC específica para Address
+	PersonGRPC       PersonGRPCConfig       // Configuración gRPC específica para Person
+	OrganizationGRPC OrganizationGRPCConfig // Configuración gRPC específica para Organization
+	PropertyGRPC     PropertyGRPCConfig     // Configuración gRPC específica para Property
 
-	Server         ServerConfig         // Configuración HTTP genérica (para compatibilidad)
-	AuthServer     AuthServerConfig     // Configuración HTTP específica para Auth
-	AddressServer  AddressServerConfig  // Configuración HTTP específica para Address
-	PersonServer   PersonServerConfig   // Configuración HTTP específica para Person
-	PropertyServer PropertyServerConfig // Configuración HTTP específica para Property
+	Server             ServerConfig             // Configuración HTTP genérica (para compatibilidad)
+	AuthServer         AuthServerConfig         // Configuración HTTP específica para Auth
+	AddressServer      AddressServerConfig      // Configuración HTTP específica para Address
+	PersonServer       PersonServerConfig       // Configuración HTTP específica para Person
+	OrganizationServer OrganizationServerConfig // Configuración HTTP específica para Organization
+	PropertyServer     PropertyServerConfig     // Configuración HTTP específica para Property
 
-	Address  AddressServiceConfig
-	Person   PersonServiceConfig
-	Property PropertyServiceConfig
+	Address      AddressServiceConfig
+	Person       PersonServiceConfig
+	Organization OrganizationServiceConfig
+	Property     PropertyServiceConfig
 
 	Logger LoggerConfig
 	APIKey string `envconfig:"REM_API_KEY"` // REM_API_KEY: clave secreta que usa este servicio
@@ -165,6 +182,8 @@ func (c *Config) GetGRPCConfig() (string, int) {
 		return c.AddressGRPC.Host, c.AddressGRPC.Port
 	case "person":
 		return c.PersonGRPC.Host, c.PersonGRPC.Port
+	case "organization":
+		return c.OrganizationGRPC.Host, c.OrganizationGRPC.Port
 	case "property":
 		return c.PropertyGRPC.Host, c.PropertyGRPC.Port
 	default:
@@ -188,6 +207,8 @@ func (c *Config) GetServerPort() int {
 		return c.AddressServer.Port
 	case "person":
 		return c.PersonServer.Port
+	case "organization":
+		return c.OrganizationServer.Port
 	case "property":
 		return c.PropertyServer.Port
 	default:
@@ -205,6 +226,8 @@ func (c *Config) GetServiceGRPCAddress(serviceName string) string {
 		return fmt.Sprintf("%s:%d", c.AddressGRPC.Host, c.AddressGRPC.Port)
 	case "person":
 		return fmt.Sprintf("%s:%d", c.PersonGRPC.Host, c.PersonGRPC.Port)
+	case "organization":
+		return fmt.Sprintf("%s:%d", c.OrganizationGRPC.Host, c.OrganizationGRPC.Port)
 	case "property":
 		return fmt.Sprintf("%s:%d", c.PropertyGRPC.Host, c.PropertyGRPC.Port)
 	default:
@@ -214,6 +237,9 @@ func (c *Config) GetServiceGRPCAddress(serviceName string) string {
 		}
 		if serviceName == "person-svc" {
 			return fmt.Sprintf("%s:%d", c.Person.Host, c.Person.Port)
+		}
+		if serviceName == "organization-svc" {
+			return fmt.Sprintf("%s:%d", c.Organization.Host, c.Organization.Port)
 		}
 		if serviceName == "property-svc" {
 			return fmt.Sprintf("%s:%d", c.Property.Host, c.Property.Port)

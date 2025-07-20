@@ -20,6 +20,41 @@ services:
       timeout: 5s
       retries: 5
 
+  # ───────────────────── RabbitMQ for Organization Service ─────────────────────
+  rabbitmq-dev:
+    image: rabbitmq:3-management
+    container_name: rem-rabbitmq-dev
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: supersecreta
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_dev_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  # ───────────────────── Redis for Cache ─────────────────────
+  redis-dev:
+    image: redis:7-alpine
+    container_name: rem-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   # ───────────────────── API Gateway (nginx) ─────────────────────
   api-gateway:
     image: nginx:alpine
@@ -32,10 +67,18 @@ services:
     depends_on:
       postgres-dev:
         condition: service_healthy
+      rabbitmq-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  rabbitmq_dev_data:
+  redis_dev_data:
 
 

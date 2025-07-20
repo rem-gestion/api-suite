@@ -5,8 +5,8 @@ set -e
 echo "🚀 Iniciando entorno de DESARROLLO REM..."
 
 # Verificar que estamos en el directorio correcto
-if [ ! -f "dev-postgres-compose.yml" ]; then
-    echo "❌ Error: No se encuentra dev-postgres-compose.yml"
+if [ ! -f "dev-full-compose.yml" ]; then
+    echo "❌ Error: No se encuentra dev-full-compose.yml"
     echo "   Ejecuta este script desde el directorio services/"
     exit 1
 fi
@@ -16,6 +16,8 @@ export REM_ENVIRONMENT=development
 
 echo "📦 Configurando entorno de desarrollo..."
 echo "   🗃️  Base de datos: rem_development (compartida)"
+echo "   🐰 RabbitMQ: localhost:5672 (Management: localhost:15672)"
+echo "   🔴 Redis: localhost:6379"
 echo "   🔧 Configuración: .env.development"
 
 # Verificar que Docker esté corriendo
@@ -26,15 +28,15 @@ fi
 
 # Detener cualquier instancia previa
 echo "🧹 Deteniendo contenedores previos..."
-docker-compose -f dev-postgres-compose.yml down
+docker-compose -f dev-full-compose.yml down
 
-# Levantar base de datos compartida
-echo "📦 Levantando base de datos compartida..."
-docker-compose -f dev-postgres-compose.yml up -d
+# Levantar infraestructura completa (DB + RabbitMQ + Redis + API Gateway)
+echo "📦 Levantando infraestructura completa..."
+docker-compose -f dev-full-compose.yml up -d
 
-# Esperar a que la DB esté lista
-echo "⏳ Esperando que la base de datos esté lista..."
-timeout=60
+# Esperar a que la infraestructura esté lista
+echo "⏳ Esperando que la infraestructura esté lista..."
+timeout=90
 counter=0
 while ! docker exec rem-postgres-dev pg_isready -U user -d rem_development > /dev/null 2>&1; do
     sleep 1
@@ -45,7 +47,36 @@ while ! docker exec rem-postgres-dev pg_isready -U user -d rem_development > /de
     fi
 done
 
-echo "✅ Base de datos lista!"
+echo "✅ PostgreSQL listo!"
+
+# Verificar RabbitMQ
+echo "⏳ Verificando RabbitMQ..."
+counter=0
+while ! docker exec rem-rabbitmq-dev rabbitmq-diagnostics -q ping > /dev/null 2>&1; do
+    sleep 1
+    counter=$((counter + 1))
+    if [ $counter -gt $timeout ]; then
+        echo "❌ Timeout esperando RabbitMQ"
+        exit 1
+    fi
+done
+
+echo "✅ RabbitMQ listo!"
+
+# Verificar Redis
+echo "⏳ Verificando Redis..."
+counter=0
+while ! docker exec rem-redis-dev redis-cli ping > /dev/null 2>&1; do
+    sleep 1
+    counter=$((counter + 1))
+    if [ $counter -gt $timeout ]; then
+        echo "❌ Timeout esperando Redis"
+        exit 1
+    fi
+done
+
+echo "✅ Redis listo!"
+echo "✅ Toda la infraestructura está lista!"
 
 # Función para ejecutar migraciones de un servicio
 run_migrations() {
@@ -60,12 +91,13 @@ run_migrations() {
     cd ..
 }
 
-# Ejecutar migraciones en orden
+# Ejecutar migraciones en orden (agregando organization)
 echo "🔄 Ejecutando migraciones..."
 run_migrations "auth-identity"
 run_migrations "address"
 run_migrations "person"
 run_migrations "property"
+run_migrations "organization"
 
 # Preguntar si poblar la base de datos
 echo ""
@@ -128,12 +160,16 @@ echo ""
 echo "🌟 Entorno de desarrollo configurado exitosamente!"
 echo ""
 echo "📋 Servicios disponibles:"
-echo "   🔐 Auth Service:     http://localhost:4002"
-echo "   🏠 Address Service:  http://localhost:4000"  
-echo "   👤 Person Service:   http://localhost:4001"
-echo "   🏢 Property Service: http://localhost:4004"
+echo "   🔐 Auth Service:         http://localhost:4002"
+echo "   🏠 Address Service:      http://localhost:4000"  
+echo "   👤 Person Service:       http://localhost:4001"
+echo "   🏢 Organization Service: http://localhost:4003"
+echo "   🏢 Property Service:     http://localhost:4004"
 echo ""
-echo "🗄️  Base de datos: postgresql://user:supersecreta@localhost:5432/rem_development"
+echo "🗄️  Infraestructura:"
+echo "   📊 PostgreSQL: postgresql://user:supersecreta@localhost:5432/rem_development"
+echo "   🐰 RabbitMQ:   amqp://user:supersecreta@localhost:5672 (Management: http://localhost:15672)"
+echo "   🔴 Redis:      redis://localhost:6379"
 echo ""
 
 # Iniciar servicios con Air si está disponible
@@ -144,7 +180,7 @@ if command -v air &> /dev/null; then
     
     # Usar tmux si está disponible
     if command -v tmux &> /dev/null; then
-        # Crear sesión tmux
+        # Crear sesión tmux con 4 servicios
         tmux new-session -d -s rem-dev -c "$PWD/auth-identity-svc"
         tmux send-keys -t rem-dev "air" Enter
         
@@ -156,12 +192,13 @@ if command -v air &> /dev/null; then
         tmux send-keys -t rem-dev "air" Enter
         
         tmux new-window -t rem-dev -c "$PWD/property-svc"
+        tmux new-window -t rem-dev -c "$PWD/organization-svc"
         tmux send-keys -t rem-dev "air" Enter
         
         # Volver a la primera ventana
         tmux select-window -t rem-dev:0
         
-        echo "🖥️  Sesión tmux 'rem-dev' creada con 3 ventanas"
+        echo "🖥️  Sesión tmux 'rem-dev' creada con 4 ventanas"
         echo "   Para conectar: tmux attach -t rem-dev"
         echo "   Para listar ventanas: Ctrl+B, w"
         echo "   Para cambiar ventana: Ctrl+B, número"
@@ -175,6 +212,7 @@ if command -v air &> /dev/null; then
         echo "   Terminal 2: cd address-svc && air"
         echo "   Terminal 3: cd person-svc && air"
         echo "   Terminal 4: cd property-svc && air"
+        echo "   Terminal 5: cd organization-svc && air"
     fi
 else
     echo "⚠️  Air no está instalado. Instálalo con: go install github.com/cosmtrek/air@latest"
@@ -184,4 +222,5 @@ else
     echo "   Terminal 2: cd address-svc && go run ./cmd/api"
     echo "   Terminal 3: cd person-svc && go run ./cmd/api"
     echo "   Terminal 4: cd property-svc && go run ./cmd/api"
+    echo "   Terminal 5: cd organization-svc && go run ./cmd/api"
 fi

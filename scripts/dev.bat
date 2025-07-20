@@ -13,15 +13,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Levantar infraestructura (DB + API Gateway)
-echo Levantando base de datos y API Gateway...
+REM Levantar infraestructura (DB + API Gateway + RabbitMQ + Redis)
+echo Levantando base de datos, API Gateway, RabbitMQ y Redis...
 docker-compose -f dev-full-compose.yml up -d
 
 REM Esperar a que la infraestructura este lista
 echo Esperando que la infraestructura este lista...
-timeout /t 10 /nobreak >nul
+timeout /t 15 /nobreak >nul
 
-REM Ejecutar migraciones
+REM Ejecutar migraciones (agregando organization-svc)
 echo Ejecutando migraciones...
 cd auth-identity-svc
 go run ./cmd/migrate
@@ -36,6 +36,10 @@ go run ./cmd/migrate
 cd ..
 
 cd property-svc
+go run ./cmd/migrate
+cd ..
+
+cd organization-svc
 go run ./cmd/migrate
 cd ..
 
@@ -100,23 +104,34 @@ if errorlevel 1 (
 REM Iniciar servicios automaticamente
 echo Iniciando servicios automaticamente...
 echo.
-echo 🌐 API Gateway: http://localhost:8081
-echo   ├─ Auth API:      http://localhost:8081/api/auth/
-echo   ├─ Users API:     http://localhost:8081/api/users/
-echo   ├─ Person API:    http://localhost:8081/api/persons/
-echo   ├─ Address API:   http://localhost:8081/api/addresses/
-echo   ├─ Property API:  http://localhost:8081/api/properties/
-echo   ├─ Amenities API: http://localhost:8081/api/amenities/
-echo   └─ Health:        http://localhost:8081/health
-echo.
 echo 🔧 Servicios individuales:
 echo   ├─ Auth Service:     http://localhost:4002
 echo   ├─ Address Service:  http://localhost:4000  
 echo   ├─ Person Service:   http://localhost:4001
 echo   └─ Property Service: http://localhost:4004
 echo.
+echo 🌐 API Gateway:        http://localhost:8081
+echo   ├─ Auth API:         http://localhost:8081/api/auth/
+echo   ├─ Users API:        http://localhost:8081/api/users/
+echo   ├─ Person API:       http://localhost:8081/api/persons/
+echo   ├─ Address API:      http://localhost:8081/api/addresses/
+echo   ├─ Property API:     http://localhost:8081/api/properties/
+echo   ├─ Organization API: http://localhost:8081/api/organizations/
+echo   └─ Health:           http://localhost:8081/health
+echo.
+echo 🔧 Servicios individuales:
+echo   ├─ Auth Service:         http://localhost:4002
+echo   ├─ Address Service:      http://localhost:4000  
+echo   ├─ Person Service:       http://localhost:4001
+echo   └─ Organization Service: http://localhost:4003
+echo   └─ Property Service:     http://localhost:4004
+echo.
+echo 🗄️ Infraestructura:
+echo   ├─ PostgreSQL:    localhost:5432 (rem_development)
+echo   ├─ RabbitMQ:      localhost:5672 (Management: http://localhost:15672)
+echo   └─ Redis:         localhost:6379
 
-REM Abrir terminales con Air para cada servicio
+REM Abrir terminales con Air para cada servicio (agregando organization-svc)
 echo Abriendo terminales para cada servicio...
 
 REM Terminal 1: Auth Identity Service
@@ -131,6 +146,8 @@ start "REM Person Service" cmd /k "cd /d %cd%\person-svc && echo [PERSON] Inicia
 
 REM Terminal 4: Property Service
 start "REM Property Service" cmd /k "cd /d %cd%\property-svc && echo [PROPERTY] Iniciando Property Service... && air"
+REM Terminal 5: Organization Service
+start "REM Organization Service" cmd /k "cd /d %cd%\organization-svc && echo [ORGANIZATION] Iniciando Organization Service... && air"
 
 echo.
 echo ✅ Entorno de desarrollo iniciado exitosamente!
@@ -142,11 +159,16 @@ echo 📋 Ejemplos de uso:
 echo    curl http://localhost:8081/api/persons/
 echo    curl http://localhost:8081/api/addresses/
 echo    curl http://localhost:8081/api/properties/
+echo    curl http://localhost:8081/api/organizations/
 echo    curl http://localhost:8081/api/auth/validate
 echo.
 echo 🛠️ Se han abierto 4 terminales con los servicios ejecutandose
 echo Para detener todo, cierra las terminales o usa Ctrl+C en cada una
 echo Para limpiar el entorno, ejecuta: .\scripts\clean.bat
+echo.
+echo 💡 Credenciales por defecto:
+echo    RabbitMQ Management: http://localhost:15672 (user/supersecreta)
+echo    PostgreSQL: user/supersecreta (rem_development)
 echo.
 echo Presiona cualquier tecla para salir...
 pause >nul

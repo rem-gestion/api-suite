@@ -14,7 +14,8 @@ CREATE TYPE organization_status_enum AS ENUM (
     'active',
     'suspended', 
     'deleted',
-    'pending_activation'
+    'pending_activation',
+    'pending'
 );
 
 -- Tipo de propietario

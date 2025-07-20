@@ -1,0 +1,396 @@
+syntax = "proto3";
+
+package organization.v1;
+option go_package = "github.com/rem-gestion/rem-common/protos/organization/v1;organizationpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ═══════════════════════════════════════════════════════════════
+//                           ENUMS
+// ═══════════════════════════════════════════════════════════════
+
+enum OrganizationType {
+  ORGANIZATION_TYPE_UNSPECIFIED = 0;
+  INMOBILIARIA = 1;
+  CONSTRUCTORA = 2;
+  DESARROLLADORA = 3;
+  CONSULTORA = 4;
+}
+
+enum InvitationStatus {
+  INVITATION_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  ACCEPTED = 2;
+  REJECTED = 3;
+  EXPIRED = 4;
+}
+
+enum EmployeeStatus {
+  EMPLOYEE_STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+  INACTIVE = 2;
+  SUSPENDED = 3;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                          MESSAGES
+// ═══════════════════════════════════════════════════════════════
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  OrganizationType type = 4;
+  string person_id = 5;
+  bool is_active = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Branch {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  string person_id = 5;
+  bool is_active = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Role {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated string permissions = 5;
+  bool is_active = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Employee {
+  string id = 1;
+  string organization_id = 2;
+  string branch_id = 3;
+  string role_id = 4;
+  string person_id = 5;
+  string user_id = 6;
+  EmployeeStatus status = 7;
+  google.protobuf.Timestamp hired_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message Owner {
+  string id = 1;
+  string organization_id = 2;
+  string person_id = 3;
+  string user_id = 4;
+  double ownership_percentage = 5;
+  bool is_primary = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Invitation {
+  string id = 1;
+  string organization_id = 2;
+  string branch_id = 3;
+  string role_id = 4;
+  string inviter_id = 5;
+  string invitee_email = 6;
+  string invitee_name = 7;
+  InvitationStatus status = 8;
+  string token = 9;
+  google.protobuf.Timestamp expires_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                       ORGANIZATION REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateOrganizationRequest {
+  string name = 1;
+  string description = 2;
+  OrganizationType type = 3;
+  string person_id = 4;
+}
+
+message GetOrganizationRequest {
+  string id = 1;
+}
+
+message UpdateOrganizationRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  OrganizationType type = 4;
+}
+
+message DeleteOrganizationRequest {
+  string id = 1;
+}
+
+message ListOrganizationsRequest {
+  uint32 page = 1;
+  uint32 per_page = 2;
+  string search = 3;
+  OrganizationType type_filter = 4;
+  bool active_only = 5;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                         BRANCH REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateBranchRequest {
+  string organization_id = 1;
+  string name = 2;
+  string description = 3;
+  string person_id = 4;
+}
+
+message GetBranchRequest {
+  string id = 1;
+}
+
+message UpdateBranchRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message DeleteBranchRequest {
+  string id = 1;
+}
+
+message ListBranchesRequest {
+  string organization_id = 1;
+  uint32 page = 2;
+  uint32 per_page = 3;
+  string search = 4;
+  bool active_only = 5;
+}
+
+message ListBranchesResponse {
+  repeated Branch data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                          ROLE REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateRoleRequest {
+  string organization_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+}
+
+message GetRoleRequest {
+  string id = 1;
+}
+
+message UpdateRoleRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+}
+
+message DeleteRoleRequest {
+  string id = 1;
+}
+
+message ListRolesRequest {
+  string organization_id = 1;
+  uint32 page = 2;
+  uint32 per_page = 3;
+  string search = 4;
+  bool active_only = 5;
+}
+
+message ListRolesResponse {
+  repeated Role data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                        EMPLOYEE REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateEmployeeRequest {
+  string organization_id = 1;
+  string branch_id = 2;
+  string role_id = 3;
+  string person_id = 4;
+  string user_id = 5;
+}
+
+message GetEmployeeRequest {
+  string id = 1;
+}
+
+message UpdateEmployeeRequest {
+  string id = 1;
+  string branch_id = 2;
+  string role_id = 3;
+  EmployeeStatus status = 4;
+}
+
+message DeleteEmployeeRequest {
+  string id = 1;
+}
+
+message ListEmployeesRequest {
+  string organization_id = 1;
+  string branch_id = 2;
+  string role_id = 3;
+  uint32 page = 4;
+  uint32 per_page = 5;
+  string search = 6;
+  EmployeeStatus status_filter = 7;
+}
+
+message ListEmployeesResponse {
+  repeated Employee data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                         OWNER REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateOwnerRequest {
+  string organization_id = 1;
+  string person_id = 2;
+  string user_id = 3;
+  double ownership_percentage = 4;
+  bool is_primary = 5;
+}
+
+message GetOwnerRequest {
+  string id = 1;
+}
+
+message UpdateOwnerRequest {
+  string id = 1;
+  double ownership_percentage = 2;
+  bool is_primary = 3;
+}
+
+message DeleteOwnerRequest {
+  string id = 1;
+}
+
+message ListOwnersRequest {
+  string organization_id = 1;
+  uint32 page = 2;
+  uint32 per_page = 3;
+}
+
+message ListOwnersResponse {
+  repeated Owner data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                       INVITATION REQUESTS
+// ═══════════════════════════════════════════════════════════════
+
+message CreateInvitationRequest {
+  string organization_id = 1;
+  string branch_id = 2;
+  string role_id = 3;
+  string inviter_id = 4;
+  string invitee_email = 5;
+  string invitee_name = 6;
+}
+
+message GetInvitationRequest {
+  string id = 1;
+}
+
+message GetInvitationByTokenRequest {
+  string token = 1;
+}
+
+message UpdateInvitationStatusRequest {
+  string id = 1;
+  InvitationStatus status = 2;
+}
+
+message ResendInvitationRequest {
+  string id = 1;
+}
+
+message ListInvitationsRequest {
+  string organization_id = 1;
+  uint32 page = 2;
+  uint32 per_page = 3;
+  InvitationStatus status_filter = 4;
+}
+
+message ListInvitationsResponse {
+  repeated Invitation data = 1;
+  uint32 total = 2;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                          SERVICE
+// ═══════════════════════════════════════════════════════════════
+
+service OrganizationService {
+  // Organizations
+  rpc CreateOrganization (CreateOrganizationRequest) returns (Organization);
+  rpc GetOrganization (GetOrganizationRequest) returns (Organization);
+  rpc UpdateOrganization (UpdateOrganizationRequest) returns (Organization);
+  rpc DeleteOrganization (DeleteOrganizationRequest) returns (google.protobuf.Empty);
+  rpc ListOrganizations (ListOrganizationsRequest) returns (ListOrganizationsResponse);
+
+  // Branches
+  rpc CreateBranch (CreateBranchRequest) returns (Branch);
+  rpc GetBranch (GetBranchRequest) returns (Branch);
+  rpc UpdateBranch (UpdateBranchRequest) returns (Branch);
+  rpc DeleteBranch (DeleteBranchRequest) returns (google.protobuf.Empty);
+  rpc ListBranches (ListBranchesRequest) returns (ListBranchesResponse);
+
+  // Roles
+  rpc CreateRole (CreateRoleRequest) returns (Role);
+  rpc GetRole (GetRoleRequest) returns (Role);
+  rpc UpdateRole (UpdateRoleRequest) returns (Role);
+  rpc DeleteRole (DeleteRoleRequest) returns (google.protobuf.Empty);
+  rpc ListRoles (ListRolesRequest) returns (ListRolesResponse);
+
+  // Employees
+  rpc CreateEmployee (CreateEmployeeRequest) returns (Employee);
+  rpc GetEmployee (GetEmployeeRequest) returns (Employee);
+  rpc UpdateEmployee (UpdateEmployeeRequest) returns (Employee);
+  rpc DeleteEmployee (DeleteEmployeeRequest) returns (google.protobuf.Empty);
+  rpc ListEmployees (ListEmployeesRequest) returns (ListEmployeesResponse);
+
+  // Owners
+  rpc CreateOwner (CreateOwnerRequest) returns (Owner);
+  rpc GetOwner (GetOwnerRequest) returns (Owner);
+  rpc UpdateOwner (UpdateOwnerRequest) returns (Owner);
+  rpc DeleteOwner (DeleteOwnerRequest) returns (google.protobuf.Empty);
+  rpc ListOwners (ListOwnersRequest) returns (ListOwnersResponse);
+
+  // Invitations
+  rpc CreateInvitation (CreateInvitationRequest) returns (Invitation);
+  rpc GetInvitation (GetInvitationRequest) returns (Invitation);
+  rpc GetInvitationByToken (GetInvitationByTokenRequest) returns (Invitation);
+  rpc UpdateInvitationStatus (UpdateInvitationStatusRequest) returns (Invitation);
+  rpc ResendInvitation (ResendInvitationRequest) returns (Invitation);
+  rpc ListInvitations (ListInvitationsRequest) returns (ListInvitationsResponse);
+}

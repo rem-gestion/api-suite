@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"gorm.io/gorm"
 )
 
 // OrganizationStatus represents the status enum for organizations
@@ -36,34 +35,30 @@ const (
 
 // Organization represents the main organization entity
 type Organization struct {
-	ID          uuid.UUID          `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Name        string             `json:"name" gorm:"type:varchar(200);not null" validate:"required,min=2,max=200"`
-	DisplayName string             `json:"display_name" gorm:"type:varchar(300);not null" validate:"required,min=2,max=300"`
-	Slug        string             `json:"slug" gorm:"type:varchar(100);not null;uniqueIndex" validate:"required,min=2,max=100,slug"`
-	Description *string            `json:"description" gorm:"type:text"`
-	Status      OrganizationStatus `json:"status" gorm:"type:organization_status_enum;not null;default:'pending'" validate:"required,oneof=active inactive suspended pending"`
-	Type        OrganizationType   `json:"type" gorm:"type:organization_type_enum;not null" validate:"required"`
-	LegalName   *string            `json:"legal_name" gorm:"type:varchar(300)"`
-	TaxID       *string            `json:"tax_id" gorm:"type:varchar(50)"`
-	Website     *string            `json:"website" gorm:"type:varchar(255)" validate:"omitempty,url"`
-	Phone       *string            `json:"phone" gorm:"type:varchar(32)" validate:"omitempty,phone"`
-	Email       *string            `json:"email" gorm:"type:varchar(160)" validate:"omitempty,email"`
-	LogoURL     *string            `json:"logo_url" gorm:"type:varchar(500)" validate:"omitempty,url"`
-	TimezoneID  string             `json:"timezone_id" gorm:"type:varchar(50);not null;default:'UTC'" validate:"required,timezone"`
-	AddressID   *uuid.UUID         `json:"address_id" gorm:"type:uuid"` // FK to address-svc
-	IsVerified  bool               `json:"is_verified" gorm:"not null;default:false"`
-	VerifiedAt  *time.Time         `json:"verified_at" gorm:"type:timestamp with time zone"`
-
-	// Subscription fields
-	SubscriptionID *uuid.UUID `json:"subscription_id" gorm:"type:uuid"`
-	PlanID         *uuid.UUID `json:"plan_id" gorm:"type:uuid"`
+	ID              uuid.UUID          `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	Name            string             `json:"name" gorm:"type:varchar(120);not null" validate:"required,min=2,max=120"`
+	DisplayName     string             `json:"display_name" gorm:"type:varchar(120);not null" validate:"required,min=2,max=120"`
+	Slug            *string            `json:"slug" gorm:"type:varchar(100);unique" validate:"omitempty,min=2,max=100,slug"`
+	Description     *string            `json:"description" gorm:"type:text"`
+	Type            *string            `json:"type" gorm:"type:varchar(50)"`
+	LegalName       *string            `json:"legal_name" gorm:"type:varchar(150)"`
+	TaxID           *string            `json:"tax_id" gorm:"type:varchar(50)"`
+	Website         *string            `json:"website" gorm:"type:text" validate:"omitempty,url"`
+	Phone           *string            `json:"phone" gorm:"type:varchar(30)" validate:"omitempty,phone"`
+	Email           *string            `json:"email" gorm:"type:varchar(100)" validate:"omitempty,email"`
+	LogoURL         *string            `json:"logo_url" gorm:"type:text" validate:"omitempty,url"`
+	TimezoneID      *string            `json:"timezone_id" gorm:"type:varchar(50)"`
+	FiscalAddressID *uuid.UUID         `json:"fiscal_address_id" gorm:"column:fiscal_address_id;type:uuid"` // FK to address-svc
+	Matricula       *string            `json:"matricula" gorm:"type:varchar(32)"`
+	Metadata        interface{}        `json:"metadata" gorm:"type:jsonb"`
+	Status          OrganizationStatus `json:"status" gorm:"type:organization_status_enum;not null;default:'active'" validate:"required,oneof=active inactive suspended pending"`
 
 	// Audit fields
-	CreatedAt time.Time       `json:"created_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
-	CreatedBy uuid.UUID       `json:"created_by" gorm:"type:uuid;not null"` // FK to auth-identity-svc
-	UpdatedAt time.Time       `json:"updated_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedBy *uuid.UUID      `json:"updated_by" gorm:"type:uuid"` // FK to auth-identity-svc
-	DeletedAt *gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	CreatedAt time.Time  `json:"created_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
+	CreatedBy uuid.UUID  `json:"created_by" gorm:"type:uuid;not null"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedBy *uuid.UUID `json:"updated_by" gorm:"type:uuid"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"type:timestamp with time zone"`
 
 	// Relationships
 	Settings     []OrganizationSetting     `json:"settings,omitempty" gorm:"foreignKey:OrganizationID;constraint:OnDelete:CASCADE"`
@@ -74,21 +69,16 @@ type Organization struct {
 	Invitations  []OrganizationInvite      `json:"invitations,omitempty" gorm:"foreignKey:OrganizationID;constraint:OnDelete:CASCADE"`
 	Integrations []OrganizationIntegration `json:"integrations,omitempty" gorm:"foreignKey:OrganizationID;constraint:OnDelete:CASCADE"`
 	Domains      []OrganizationDomain      `json:"domains,omitempty" gorm:"foreignKey:OrganizationID;constraint:OnDelete:CASCADE"`
-	Subscription *OrganizationSubscription `json:"subscription,omitempty" gorm:"foreignKey:OrganizationID"`
 }
 
 // OrganizationSetting represents organization-specific settings
 type OrganizationSetting struct {
-	ID             uuid.UUID   `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	OrganizationID uuid.UUID   `json:"organization_id" gorm:"type:uuid;not null;index"`
-	SettingKey     string      `json:"setting_key" gorm:"type:varchar(100);not null" validate:"required,min=1,max=100"`
-	SettingValue   interface{} `json:"setting_value" gorm:"type:jsonb;not null"`
-	Description    *string     `json:"description" gorm:"type:text"`
-	IsEditable     bool        `json:"is_editable" gorm:"not null;default:true"`
+	OrganizationID uuid.UUID   `json:"organization_id" gorm:"type:uuid;not null;primaryKey;index"`
+	SettingKey     string      `json:"setting_key" gorm:"type:varchar(64);not null;primaryKey" validate:"required,min=2,max=64"`
+	SettingValue   interface{} `json:"setting_value" gorm:"type:jsonb"`
 
 	// Audit fields
 	CreatedAt time.Time  `json:"created_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
-	CreatedBy uuid.UUID  `json:"created_by" gorm:"type:uuid;not null"`
 	UpdatedAt time.Time  `json:"updated_at" gorm:"type:timestamp with time zone;not null;default:CURRENT_TIMESTAMP"`
 	UpdatedBy *uuid.UUID `json:"updated_by" gorm:"type:uuid"`
 

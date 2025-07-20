@@ -10,8 +10,17 @@ fi
 
 # Detener contenedores de desarrollo
 echo "📦 Deteniendo contenedores de desarrollo..."
+if [ -f "dev-full-compose.yml" ]; then
+    docker-compose -f dev-full-compose.yml down
+fi
 if [ -f "dev-postgres-compose.yml" ]; then
     docker-compose -f dev-postgres-compose.yml down
+fi
+if [ -f "rabbitmq-compose.yml" ]; then
+    docker-compose -f rabbitmq-compose.yml down
+fi
+if [ -f "redis-compose.yml" ]; then
+    docker-compose -f redis-compose.yml down
 fi
 
 # Detener contenedores de producción si existen
