@@ -140,7 +140,7 @@ func (c *OrganizationController) GetOrganization(ctx *gin.Context) {
 	}
 
 	// 2. Validar y parsear ID de la organización
-	orgIDStr := ctx.Param("id")
+	orgIDStr := ctx.Param("org_id")
 	if orgIDStr == "" {
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "missing_org_id",
@@ -302,7 +302,7 @@ func (c *OrganizationController) UpdateOrganization(ctx *gin.Context) {
 	}
 
 	// 2. Validar y parsear ID de la organización
-	orgIDStr := ctx.Param("id")
+	orgIDStr := ctx.Param("org_id")
 	if orgIDStr == "" {
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "missing_org_id",
@@ -388,7 +388,7 @@ func (c *OrganizationController) UpdateOrganizationStatus(ctx *gin.Context) {
 	}
 
 	// 2. Validar y parsear ID de la organización
-	orgIDStr := ctx.Param("id")
+	orgIDStr := ctx.Param("org_id")
 	if orgIDStr == "" {
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "missing_org_id",
@@ -457,7 +457,7 @@ func (c *OrganizationController) GetOrganizationSettings(ctx *gin.Context) {
 	c.logger.Debug("Getting organization settings")
 
 	// 1. Validar y parsear ID de la organización
-	orgID := ctx.Param("id")
+	orgID := ctx.Param("org_id")
 	if orgID == "" {
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "missing_org_id",
@@ -524,7 +524,7 @@ func (c *OrganizationController) UpdateOrganizationSettings(ctx *gin.Context) {
 	}
 
 	// 2. Validar y parsear ID de la organización
-	orgIDStr := ctx.Param("id")
+	orgIDStr := ctx.Param("org_id")
 	if orgIDStr == "" {
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "missing_org_id",
@@ -619,28 +619,44 @@ func (c *OrganizationController) mapOrganizationToResponse(org *models.Organizat
 			CreatedAt: org.CreatedAt,
 			UpdatedAt: org.UpdatedAt,
 		},
-		Name:           org.Name,
-		DisplayName:    org.DisplayName,
-		Slug:           org.Slug,
-		Description:    org.Description,
-		Status:         string(org.Status),
-		Type:           string(org.Type),
-		LegalName:      org.LegalName,
-		TaxID:          org.TaxID,
-		Website:        org.Website,
-		Phone:          org.Phone,
-		Email:          org.Email,
-		LogoURL:        org.LogoURL,
-		TimezoneID:     org.TimezoneID,
-		IsVerified:     org.IsVerified,
-		VerifiedAt:     org.VerifiedAt,
-		SubscriptionID: org.SubscriptionID,
-		PlanID:         org.PlanID,
+		Name:        org.Name,
+		DisplayName: org.DisplayName,
+		Status:      string(org.Status),
 	}
 
-	// Agregar FiscalAddressID si existe
-	if org.AddressID != nil {
-		response.FiscalAddressID = org.AddressID
+	// Campos opcionales
+	if org.Slug != nil {
+		response.Slug = *org.Slug
+	}
+	if org.Description != nil {
+		response.Description = org.Description
+	}
+	if org.Type != nil {
+		response.Type = *org.Type
+	}
+	if org.LegalName != nil {
+		response.LegalName = org.LegalName
+	}
+	if org.TaxID != nil {
+		response.TaxID = org.TaxID
+	}
+	if org.Website != nil {
+		response.Website = org.Website
+	}
+	if org.Phone != nil {
+		response.Phone = org.Phone
+	}
+	if org.Email != nil {
+		response.Email = org.Email
+	}
+	if org.LogoURL != nil {
+		response.LogoURL = org.LogoURL
+	}
+	if org.TimezoneID != nil {
+		response.TimezoneID = *org.TimezoneID
+	}
+	if org.FiscalAddressID != nil {
+		response.FiscalAddressID = org.FiscalAddressID
 	}
 
 	return response

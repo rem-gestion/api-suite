@@ -20,13 +20,13 @@ func SetupBasicOrganizationRoutes(
 		// Rutas principales de organizaciones
 		protected.POST("/organizations", orgController.CreateOrganization)
 		protected.GET("/organizations", orgController.ListOrganizations)
-		protected.GET("/organizations/:id", orgController.GetOrganization)
-		protected.PUT("/organizations/:id", orgController.UpdateOrganization)
-		protected.PUT("/organizations/:id/status", orgController.UpdateOrganizationStatus)
+		protected.GET("/organizations/:org_id", orgController.GetOrganization)
+		protected.PUT("/organizations/:org_id", orgController.UpdateOrganization)
+		protected.PUT("/organizations/:org_id/status", orgController.UpdateOrganizationStatus)
 
 		// Configuración de organizaciones
-		protected.GET("/organizations/:id/settings", orgController.GetOrganizationSettings)
-		protected.PUT("/organizations/:id/settings", orgController.UpdateOrganizationSettings)
+		protected.GET("/organizations/:org_id/settings", orgController.GetOrganizationSettings)
+		protected.PUT("/organizations/:org_id/settings", orgController.UpdateOrganizationSettings)
 	}
 }
 
@@ -53,13 +53,13 @@ func SetupRoutes(
 		// Rutas principales de organizaciones
 		protected.POST("/organizations", controllers.Organization.CreateOrganization)
 		protected.GET("/organizations", controllers.Organization.ListOrganizations)
-		protected.GET("/organizations/:id", controllers.Organization.GetOrganization)
-		protected.PUT("/organizations/:id", controllers.Organization.UpdateOrganization)
-		protected.PUT("/organizations/:id/status", controllers.Organization.UpdateOrganizationStatus)
+		protected.GET("/organizations/:org_id", controllers.Organization.GetOrganization)
+		protected.PUT("/organizations/:org_id", controllers.Organization.UpdateOrganization)
+		protected.PUT("/organizations/:org_id/status", controllers.Organization.UpdateOrganizationStatus)
 
 		// Configuración de organizaciones
-		protected.GET("/organizations/:id/settings", controllers.Organization.GetOrganizationSettings)
-		protected.PUT("/organizations/:id/settings", controllers.Organization.UpdateOrganizationSettings)
+		protected.GET("/organizations/:org_id/settings", controllers.Organization.GetOrganizationSettings)
+		protected.PUT("/organizations/:org_id/settings", controllers.Organization.UpdateOrganizationSettings)
 
 		// === RUTAS DE EMPLEADOS ===
 		// Gestión de empleados

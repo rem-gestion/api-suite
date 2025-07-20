@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,6 +55,8 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, req *dto.C
 
 	// 1. Validar que el usuario creador existe
 	_, err := s.clients.AuthIdentity.GetUserById(createdBy.String())
+
+	fmt.Println("Creator user validation:", createdBy.String())
 	if err != nil {
 		s.logger.Error("Creator user validation failed", zap.Error(err))
 		return nil, rcerrors.NewValidationError("created_by", "invalid creator user_id")
@@ -82,23 +85,22 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, req *dto.C
 
 	// 4. Crear organización
 	org := &models.Organization{
-		Name:        req.Name,
-		DisplayName: req.DisplayName,
-		Slug:        req.Slug,
-		Description: req.Description,
-		Type:        models.OrganizationType(req.Type),
-		LegalName:   req.LegalName,
-		TaxID:       req.TaxID,
-		Website:     req.Website,
-		Phone:       req.Phone,
-		Email:       req.Email,
-		LogoURL:     req.LogoURL,
-		TimezoneID:  req.TimezoneID,
-		AddressID:   req.FiscalAddressID,
-		Status:      models.OrgStatusPending,
-		IsVerified:  false,
-		CreatedBy:   createdBy,
-		UpdatedBy:   &createdBy,
+		Name:            req.Name,
+		DisplayName:     req.DisplayName,
+		Slug:            &req.Slug,
+		Description:     req.Description,
+		Type:            &req.Type,
+		LegalName:       req.LegalName,
+		TaxID:           req.TaxID,
+		Website:         req.Website,
+		Phone:           req.Phone,
+		Email:           req.Email,
+		LogoURL:         req.LogoURL,
+		TimezoneID:      &req.TimezoneID,
+		FiscalAddressID: req.FiscalAddressID,
+		Status:          models.OrgStatusPending,
+		CreatedBy:       createdBy,
+		UpdatedBy:       &createdBy,
 	}
 
 	// 5. Crear en base de datos
@@ -114,15 +116,21 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, req *dto.C
 		// No es un error crítico, continúa
 	}
 
-	// 7. Crear rol de propietario por defecto
+	// 7. Crear branch principal por defecto
+	if err := s.createMainBranch(ctx, createdOrg, createdBy); err != nil {
+		s.logger.Warn("Failed to create main branch", zap.Error(err))
+		// No es un error crítico para la creación de la organización
+	}
+
+	// 8. Crear rol de propietario por defecto
 	if err := s.createDefaultOwnerRole(ctx, createdOrg.ID, createdBy); err != nil {
 		s.logger.Warn("Failed to create default owner role", zap.Error(err))
 	}
 
-	// 8. Invalidar cache
+	// 9. Invalidar cache
 	s.invalidateOrganizationCache(createdOrg.ID.String())
 
-	// 9. Publicar evento
+	// 10. Publicar evento
 	if err := s.events.PublishOrganizationCreated(createdOrg); err != nil {
 		s.logger.Warn("Failed to publish organization created event", zap.Error(err))
 	}
@@ -261,7 +269,7 @@ func (s *OrganizationService) UpdateOrganization(ctx context.Context, orgID uuid
 		updates["timezone_id"] = *req.TimezoneID
 	}
 	if req.FiscalAddressID != nil {
-		updates["address_id"] = *req.FiscalAddressID
+		updates["fiscal_address_id"] = *req.FiscalAddressID
 	}
 
 	updates["updated_by"] = updatedBy
@@ -539,4 +547,42 @@ func (s *OrganizationService) invalidateOrganizationCache(orgID string) {
 // invalidateOrganizationSettingsCache invalida el cache de configuraciones de una organización
 func (s *OrganizationService) invalidateOrganizationSettingsCache(orgID string) {
 	s.cache.DeleteOrganizationSettings(orgID)
+}
+
+// createMainBranch crea la sucursal principal por defecto para una nueva organización
+func (s *OrganizationService) createMainBranch(ctx context.Context, org *models.Organization, createdBy uuid.UUID) error {
+	s.logger.Info("Creating main branch for organization",
+		zap.String("org_id", org.ID.String()),
+		zap.String("org_name", org.DisplayName),
+	)
+
+	// Crear la branch principal con el mismo nombre que la organización
+	mainBranch := &models.OrganizationBranch{
+		OrganizationID: org.ID,
+		DisplayName:    org.DisplayName + " - Oficina Principal", // Agregar sufijo para distinguir
+		IsMain:         true,
+		CreatedBy:      createdBy,
+	}
+
+	// Usar el mismo email y teléfono de la organización si están disponibles
+	if org.Email != nil {
+		mainBranch.Email = org.Email
+	}
+	if org.Phone != nil {
+		mainBranch.Phone = org.Phone
+	}
+
+	// Crear la branch en la base de datos
+	_, err := s.repos.Branch.Create(ctx, mainBranch)
+	if err != nil {
+		s.logger.Error("Failed to create main branch", zap.Error(err))
+		return err
+	}
+
+	s.logger.Info("Main branch created successfully",
+		zap.String("org_id", org.ID.String()),
+		zap.String("branch_name", mainBranch.DisplayName),
+	)
+
+	return nil
 }

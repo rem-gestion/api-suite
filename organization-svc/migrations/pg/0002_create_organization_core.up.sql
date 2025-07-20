@@ -10,10 +10,21 @@
 -- =============================================================================
 CREATE TABLE organization (
     id                  UUID         PRIMARY KEY DEFAULT generate_uuid(),
-    display_name        VARCHAR(120) NOT NULL,
-    logo_url            TEXT,
-    fiscal_address_id   UUID,        -- FK lógica externa → address-svc.address.id (no enforce DB)
-    matricula           VARCHAR(32),
+    name                VARCHAR(120) NOT NULL,  -- Nombre interno de la organización
+    display_name        VARCHAR(120) NOT NULL,  -- Nombre de visualización
+    slug                VARCHAR(100) UNIQUE,    -- Identificador único legible para URLs
+    description         TEXT,                   -- Descripción de la organización
+    type                VARCHAR(50),            -- Tipo de organización (real_estate, etc.)
+    legal_name          VARCHAR(150),           -- Nombre legal/razón social
+    tax_id              VARCHAR(50),            -- ID fiscal/RUT/CUIT
+    website             TEXT,                   -- Sitio web oficial
+    phone               VARCHAR(30),            -- Teléfono principal
+    email               VARCHAR(100),           -- Email de contacto
+    logo_url            TEXT,                   -- URL del logo
+    timezone_id         VARCHAR(50),            -- Zona horaria
+    fiscal_address_id   UUID,                   -- FK lógica externa → address-svc.address.id (no enforce DB)
+    matricula           VARCHAR(32),            -- Matrícula profesional
+    metadata            JSONB,                  -- Metadatos adicionales
     status              organization_status_enum NOT NULL DEFAULT 'active',
     
     -- Auditoría completa
@@ -24,7 +35,11 @@ CREATE TABLE organization (
     deleted_at          TIMESTAMP WITH TIME ZONE, -- Soft delete
     
     -- Constraints mejorados
+    CONSTRAINT chk_organization_name_length CHECK (char_length(name) >= 2),
     CONSTRAINT chk_organization_display_name_length CHECK (char_length(display_name) >= 2),
+    CONSTRAINT chk_organization_slug_format CHECK (slug IS NULL OR slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+    CONSTRAINT chk_organization_email_format CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    CONSTRAINT chk_organization_website_format CHECK (website IS NULL OR website ~ '^https?://'),
     CONSTRAINT chk_organization_matricula_format CHECK (matricula IS NULL OR matricula ~ '^[A-Z0-9\-]+$'),
     CONSTRAINT chk_organization_valid_created_by CHECK (is_valid_uuid(created_by::TEXT)),
     -- IMPORTANTE: Este constraint obliga a que status='deleted' cuando deleted_at IS NOT NULL
@@ -38,7 +53,12 @@ CREATE TABLE organization (
 
 -- Índices con nombres explícitos y optimizados
 CREATE INDEX ix_organization_status_active ON organization(status) WHERE deleted_at IS NULL;
+CREATE INDEX ix_organization_name_search ON organization(name) WHERE deleted_at IS NULL;
 CREATE INDEX ix_organization_display_name_search ON organization(display_name) WHERE deleted_at IS NULL;
+CREATE INDEX ix_organization_slug_unique ON organization(slug) WHERE slug IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX ix_organization_type ON organization(type) WHERE type IS NOT NULL;
+CREATE INDEX ix_organization_email ON organization(email) WHERE email IS NOT NULL;
+CREATE INDEX ix_organization_tax_id ON organization(tax_id) WHERE tax_id IS NOT NULL;
 CREATE INDEX ix_organization_created_by ON organization(created_by);
 CREATE INDEX ix_organization_fiscal_address ON organization(fiscal_address_id) WHERE fiscal_address_id IS NOT NULL;
 CREATE INDEX ix_organization_deleted_at ON organization(deleted_at) WHERE deleted_at IS NOT NULL;
@@ -202,6 +222,19 @@ CREATE TRIGGER trg_organization_owner_validate_percentages
 -- COMENTARIOS PARA DOCUMENTACIÓN
 -- =============================================================================
 COMMENT ON TABLE organization IS 'Inmobiliarias - entidad principal del dominio';
+COMMENT ON COLUMN organization.name IS 'Nombre interno de la organización';
+COMMENT ON COLUMN organization.display_name IS 'Nombre de visualización público';
+COMMENT ON COLUMN organization.slug IS 'Identificador único para URLs amigables';
+COMMENT ON COLUMN organization.description IS 'Descripción de la organización';
+COMMENT ON COLUMN organization.type IS 'Tipo de organización (real_estate, etc.)';
+COMMENT ON COLUMN organization.legal_name IS 'Nombre legal o razón social';
+COMMENT ON COLUMN organization.tax_id IS 'Identificador fiscal (RUT, CUIT, etc.)';
+COMMENT ON COLUMN organization.website IS 'Sitio web oficial';
+COMMENT ON COLUMN organization.phone IS 'Teléfono principal de contacto';
+COMMENT ON COLUMN organization.email IS 'Email principal de contacto';
+COMMENT ON COLUMN organization.logo_url IS 'URL del logo de la organización';
+COMMENT ON COLUMN organization.timezone_id IS 'Zona horaria de la organización';
+COMMENT ON COLUMN organization.metadata IS 'Metadatos adicionales en formato JSON';
 COMMENT ON COLUMN organization.fiscal_address_id IS 'FK lógica externa → address-svc.address.id (no enforce DB)';
 COMMENT ON COLUMN organization.created_by IS 'FK lógica externa → auth-identity-svc.users.id (no enforce DB)';
 COMMENT ON COLUMN organization.updated_by IS 'FK lógica externa → auth-identity-svc.users.id (no enforce DB)';
@@ -258,7 +291,7 @@ COMMENT ON FUNCTION create_default_organization_settings(UUID) IS 'Crea configur
 -- SMOKE TEST PARA VALIDACIÓN EN CI
 -- =============================================================================
 /*
-Simple smoke test para verificar que la migración se aplicó correctamente:
+Smoke test para verificar que la migración se aplicó correctamente:
 
 -- Verificar que las tablas existen y los ENUMs están disponibles
 SELECT 1 FROM organization_status_enum LIMIT 1;
@@ -268,8 +301,36 @@ SELECT 1 FROM owner_type_enum LIMIT 1;
 SELECT generate_uuid() IS NOT NULL;
 SELECT current_timestamp_utc() IS NOT NULL;
 
--- Verificar constraints básicos
-INSERT INTO organization (display_name, created_by) 
-VALUES ('Test Org', generate_uuid()) 
+-- Verificar constraints básicos con todos los campos
+INSERT INTO organization (
+    name, 
+    display_name, 
+    slug, 
+    description, 
+    type, 
+    legal_name, 
+    tax_id, 
+    website, 
+    phone, 
+    email, 
+    timezone_id, 
+    metadata, 
+    created_by
+) 
+VALUES (
+    'Test Org',
+    'Test Organization Display', 
+    'test-org-slug',
+    'Test description',
+    'real_estate',
+    'Test Organization Inc.',
+    '12-3456789',
+    'https://test.com',
+    '+1-555-0123',
+    'test@test.com',
+    'America/New_York',
+    '{"test": true}'::jsonb,
+    generate_uuid()
+) 
 RETURNING id;
 */

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -35,14 +36,9 @@ func (r *organizationSettingRepository) Create(ctx context.Context, setting *mod
 }
 
 func (r *organizationSettingRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.OrganizationSetting, error) {
-	var setting models.OrganizationSetting
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&setting).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("organization setting not found")
-		}
-		return nil, fmt.Errorf("failed to get organization setting: %w", err)
-	}
-	return &setting, nil
+	// Este método no es apropiado para settings con clave primaria compuesta
+	// Se mantiene por compatibilidad con la interfaz, pero debería usar GetByKey
+	return nil, fmt.Errorf("GetByID not supported for OrganizationSetting with composite primary key, use GetByKey instead")
 }
 
 func (r *organizationSettingRepository) GetByKey(ctx context.Context, orgID uuid.UUID, key string) (*models.OrganizationSetting, error) {
@@ -57,10 +53,17 @@ func (r *organizationSettingRepository) GetByKey(ctx context.Context, orgID uuid
 }
 
 func (r *organizationSettingRepository) Update(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.OrganizationSetting, error) {
+	// Este método no es apropiado para settings con clave primaria compuesta
+	// Se mantiene por compatibilidad con la interfaz, pero debería usar UpdateByKey
+	return nil, fmt.Errorf("Update not supported for OrganizationSetting with composite primary key, use UpdateByKey instead")
+}
+
+// UpdateByKey actualiza un setting por organización y clave
+func (r *organizationSettingRepository) UpdateByKey(ctx context.Context, orgID uuid.UUID, key string, updates map[string]interface{}) (*models.OrganizationSetting, error) {
 	var setting models.OrganizationSetting
 
 	// First check if setting exists
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&setting).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("organization_id = ? AND setting_key = ?", orgID, key).First(&setting).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("organization setting not found")
 		}
@@ -76,7 +79,7 @@ func (r *organizationSettingRepository) Update(ctx context.Context, id uuid.UUID
 	}
 
 	// Return updated setting
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&setting).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("organization_id = ? AND setting_key = ?", orgID, key).First(&setting).Error; err != nil {
 		return nil, fmt.Errorf("failed to get updated organization setting: %w", err)
 	}
 
@@ -84,14 +87,9 @@ func (r *organizationSettingRepository) Update(ctx context.Context, id uuid.UUID
 }
 
 func (r *organizationSettingRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result := r.db.WithContext(ctx).Delete(&models.OrganizationSetting{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("failed to delete organization setting: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("organization setting not found")
-	}
-	return nil
+	// Este método no es apropiado para settings con clave primaria compuesta
+	// Se mantiene por compatibilidad con la interfaz, pero debería usar DeleteByKey
+	return fmt.Errorf("Delete not supported for OrganizationSetting with composite primary key, use DeleteByKey instead")
 }
 
 // ===============================
@@ -111,19 +109,24 @@ func (r *organizationSettingRepository) SetMultiple(ctx context.Context, orgID u
 		for key, value := range settings {
 			var setting models.OrganizationSetting
 
+			// Serializar el valor a JSON para asegurar compatibilidad con JSONB
+			jsonValue, err := json.Marshal(value)
+			if err != nil {
+				return fmt.Errorf("failed to marshal setting value for %s: %w", key, err)
+			}
+
 			// Check if setting exists
-			err := tx.Where("organization_id = ? AND setting_key = ?", orgID, key).First(&setting).Error
+			err = tx.Where("organization_id = ? AND setting_key = ?", orgID, key).First(&setting).Error
 
 			if err == gorm.ErrRecordNotFound {
 				// Create new setting
 				setting = models.OrganizationSetting{
-					ID:             uuid.New(),
 					OrganizationID: orgID,
 					SettingKey:     key,
-					SettingValue:   fmt.Sprintf("%v", value),
-					IsEditable:     true,
-					CreatedBy:      createdBy,
+					SettingValue:   string(jsonValue), // Usar el JSON como string
 					CreatedAt:      time.Now(),
+					UpdatedAt:      time.Now(),
+					UpdatedBy:      &createdBy,
 				}
 				if err := tx.Create(&setting).Error; err != nil {
 					return fmt.Errorf("failed to create setting %s: %w", key, err)
@@ -133,7 +136,7 @@ func (r *organizationSettingRepository) SetMultiple(ctx context.Context, orgID u
 			} else {
 				// Update existing setting
 				updates := map[string]interface{}{
-					"setting_value": fmt.Sprintf("%v", value),
+					"setting_value": string(jsonValue), // Usar el JSON como string
 					"updated_by":    createdBy,
 					"updated_at":    time.Now(),
 				}
