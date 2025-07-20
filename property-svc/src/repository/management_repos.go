@@ -182,11 +182,11 @@ func (r *PropertyAmenityRepo) Create(amenity *models.PropertyAmenity) (*models.P
 	}
 	r.lg.Info("property amenity created successfully",
 		zap.String("property_id", amenity.PropertyID.String()),
-		zap.String("amenity_id", amenity.AmenityID))
+		zap.Int32("amenity_id", amenity.AmenityID))
 	return amenity, nil
 }
 
-func (r *PropertyAmenityRepo) GetByPropertyAndAmenity(propertyID uuid.UUID, amenityID string) (*models.PropertyAmenity, error) {
+func (r *PropertyAmenityRepo) GetByPropertyAndAmenity(propertyID uuid.UUID, amenityID int32) (*models.PropertyAmenity, error) {
 	var amenity models.PropertyAmenity
 	err := r.db.Preload("Property").
 		First(&amenity, "property_id = ? AND amenity_id = ?", propertyID, amenityID).Error
@@ -197,7 +197,7 @@ func (r *PropertyAmenityRepo) GetByPropertyAndAmenity(propertyID uuid.UUID, amen
 		}
 		r.lg.Error("failed to get property amenity",
 			zap.String("property_id", propertyID.String()),
-			zap.String("amenity_id", amenityID),
+			zap.Int32("amenity_id", amenityID),
 			zap.Error(err))
 		return nil, err
 	}
@@ -225,30 +225,30 @@ func (r *PropertyAmenityRepo) Update(amenity *models.PropertyAmenity) error {
 	if err := r.db.Save(amenity).Error; err != nil {
 		r.lg.Error("failed to update property amenity",
 			zap.String("property_id", amenity.PropertyID.String()),
-			zap.String("amenity_id", amenity.AmenityID),
+			zap.Int32("amenity_id", amenity.AmenityID),
 			zap.Error(err))
 		return err
 	}
 	r.lg.Info("property amenity updated successfully",
 		zap.String("property_id", amenity.PropertyID.String()),
-		zap.String("amenity_id", amenity.AmenityID))
+		zap.Int32("amenity_id", amenity.AmenityID))
 	return nil
 }
 
-func (r *PropertyAmenityRepo) Delete(propertyID uuid.UUID, amenityID string) error {
+func (r *PropertyAmenityRepo) Delete(propertyID uuid.UUID, amenityID int32) error {
 	err := r.db.Where("property_id = ? AND amenity_id = ?", propertyID, amenityID).
 		Delete(&models.PropertyAmenity{}).Error
 
 	if err != nil {
 		r.lg.Error("failed to delete property amenity",
 			zap.String("property_id", propertyID.String()),
-			zap.String("amenity_id", amenityID),
+			zap.Int32("amenity_id", amenityID),
 			zap.Error(err))
 		return err
 	}
 	r.lg.Info("property amenity deleted successfully",
 		zap.String("property_id", propertyID.String()),
-		zap.String("amenity_id", amenityID))
+		zap.Int32("amenity_id", amenityID))
 	return nil
 }
 
@@ -292,5 +292,94 @@ func (r *PropertyAmenityRepo) BulkDeleteForProperty(propertyID uuid.UUID) error 
 
 	r.lg.Info("bulk deleted property amenities successfully",
 		zap.String("property_id", propertyID.String()))
+	return nil
+}
+
+// ListByPropertyID gets all amenities for a property with full amenity details
+func (r *PropertyAmenityRepo) ListByPropertyID(propertyID uuid.UUID) ([]*models.Amenity, error) {
+	var amenities []*models.Amenity
+
+	// Get amenities through proper JOIN with property_property_amenities
+	err := r.db.Table("property_amenity as a").
+		Select("a.id, a.name, a.category, a.icon_url").
+		Joins("INNER JOIN property_property_amenities as pa ON CAST(pa.amenity_id AS INTEGER) = a.id").
+		Where("pa.property_id = ?", propertyID).
+		Scan(&amenities).Error
+
+	if err != nil {
+		r.lg.Error("failed to list amenities for property",
+			zap.String("property_id", propertyID.String()), zap.Error(err))
+		return nil, err
+	}
+
+	r.lg.Debug("amenities listed successfully",
+		zap.String("property_id", propertyID.String()),
+		zap.Int("count", len(amenities)))
+	return amenities, nil
+}
+
+// AddAmenityToProperty adds an amenity to a property
+func (r *PropertyAmenityRepo) AddAmenityToProperty(propertyID uuid.UUID, amenityID int32, note string) error {
+	// First check if the relation already exists
+	var existing models.PropertyAmenity
+	err := r.db.Where("property_id = ? AND amenity_id = ?", propertyID, amenityID).
+		First(&existing).Error
+
+	if err == nil {
+		// Relation already exists
+		r.lg.Warn("amenity already associated with property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID))
+		return &rerrors.ConflictError{Msg: "amenity already associated with this property"}
+	}
+
+	// Create the relation
+	propertyAmenity := &models.PropertyAmenity{
+		PropertyID: propertyID,
+		AmenityID:  amenityID,
+		Note:       &note,
+	}
+
+	err = r.db.Create(propertyAmenity).Error
+	if err != nil {
+		r.lg.Error("failed to add amenity to property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID),
+			zap.Error(err))
+		return err
+	}
+
+	r.lg.Info("amenity added to property successfully",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID))
+	return nil
+}
+
+// RemoveAmenityFromProperty removes an amenity from a property
+func (r *PropertyAmenityRepo) RemoveAmenityFromProperty(propertyID uuid.UUID, amenityID int32) error {
+	result := r.db.Where("property_id = ? AND amenity_id = ?", propertyID, amenityID).
+		Delete(&models.PropertyAmenity{})
+
+	if result.Error != nil {
+		r.lg.Error("failed to remove amenity from property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID),
+			zap.Error(result.Error))
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		r.lg.Warn("attempt to remove non-existent amenity from property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID),
+			zap.String("reason", "no rows affected - amenity was not associated with this property"),
+			zap.Int64("rows_affected", result.RowsAffected))
+		return &rerrors.NotFoundError{Msg: "amenity not associated with this property"}
+	}
+
+	r.lg.Info("amenity removed from property successfully",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID),
+		zap.Int64("rows_affected", result.RowsAffected))
 	return nil
 }

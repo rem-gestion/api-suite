@@ -69,7 +69,7 @@ CREATE TABLE property_management (
 );
 
 -- Property amenities junction table
-CREATE TABLE property_amenities (
+CREATE TABLE property_property_amenities (
   property_id           UUID NOT NULL REFERENCES property(id),
   amenity_id            JSONB,
   note                  TEXT,
@@ -434,7 +434,7 @@ INSERT INTO property_management (
   );
 
 -- Insert example property amenities relationships
-INSERT INTO property_amenities (property_id, amenity_id, note) VALUES
+INSERT INTO property_property_amenities (property_id, amenity_id, note) VALUES
   -- Departamento Palermo (moderno, con amenities)
   ('550e8400-e29b-41d4-a716-446655440001', '6', 'Balcón con vista a la calle'),    -- Balcón
   ('550e8400-e29b-41d4-a716-446655440001', '13', 'Luminoso por orientación norte'), -- Luminoso

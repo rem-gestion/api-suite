@@ -113,11 +113,12 @@ func (PropertyManagement) TableName() string { return "property_property_managem
 // PropertyAmenity model - junction table for property amenities
 type PropertyAmenity struct {
 	PropertyID uuid.UUID `gorm:"type:uuid;not null;primaryKey" json:"property_id"`
-	AmenityID  string    `gorm:"type:jsonb;not null;primaryKey" json:"amenity_id"` // Using string to handle JSONB
+	AmenityID  int32     `gorm:"not null;primaryKey" json:"amenity_id"`
 	Note       *string   `gorm:"type:text" json:"note"`
 
 	// Relations
 	Property Property `gorm:"foreignKey:PropertyID" json:"property,omitempty"`
+	Amenity  Amenity  `gorm:"foreignKey:AmenityID" json:"amenity,omitempty"`
 }
 
 func (PropertyAmenity) TableName() string { return "property_property_amenities" }

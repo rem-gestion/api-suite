@@ -46,6 +46,11 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 		properties.DELETE("/:id", r.propertyController.SoftDelete)
 		properties.DELETE("/:id/permanent", r.propertyController.Delete)
 		properties.GET("/internal-code/:code", r.propertyController.GetByInternalCode)
+
+		// Property-Amenity relations
+		properties.GET("/:id/amenities", r.propertyController.ListPropertyAmenities)
+		properties.POST("/:id/amenities", r.propertyController.AddAmenityToProperty)
+		properties.DELETE("/:id/amenities/:amenity_id", r.propertyController.RemoveAmenityFromProperty)
 	}
 
 	// Property Type routes (catalog)

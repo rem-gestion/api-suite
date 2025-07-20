@@ -358,6 +358,97 @@ func (s *PropertyService) toPropertyResponse(property *models.Property) *dto.Pro
 	return response
 }
 
+// ListPropertyAmenities returns all amenities associated with a property
+func (s *PropertyService) ListPropertyAmenities(propertyID uuid.UUID) ([]*dto.AmenityResponse, error) {
+	s.lg.Debug("listing property amenities", zap.String("property_id", propertyID.String()))
+
+	// First verify the property exists
+	_, err := s.propertyRepo.GetByID(propertyID)
+	if err != nil {
+		s.lg.Warn("property not found", zap.String("property_id", propertyID.String()), zap.Error(err))
+		return nil, err
+	}
+
+	// Get amenities for this property
+	amenities, err := s.propertyAmenityRepo.ListByPropertyID(propertyID)
+	if err != nil {
+		s.lg.Error("failed to list property amenities", zap.String("property_id", propertyID.String()), zap.Error(err))
+		return nil, err
+	}
+
+	var response []*dto.AmenityResponse
+	for _, amenity := range amenities {
+		response = append(response, &dto.AmenityResponse{
+			ID:       amenity.ID,
+			Name:     amenity.Name,
+			Category: amenity.Category,
+			IconURL:  amenity.IconURL,
+		})
+	}
+
+	s.lg.Debug("property amenities listed successfully", zap.String("property_id", propertyID.String()), zap.Int("count", len(response)))
+	return response, nil
+}
+
+// AddAmenityToProperty adds an amenity to a property
+func (s *PropertyService) AddAmenityToProperty(propertyID uuid.UUID, amenityID int32, note string) error {
+	s.lg.Debug("adding amenity to property",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID),
+		zap.String("note", note))
+
+	// Verify property exists
+	_, err := s.propertyRepo.GetByID(propertyID)
+	if err != nil {
+		s.lg.Warn("property not found", zap.String("property_id", propertyID.String()), zap.Error(err))
+		return err
+	}
+
+	// Add amenity to property
+	err = s.propertyAmenityRepo.AddAmenityToProperty(propertyID, amenityID, note)
+	if err != nil {
+		s.lg.Error("failed to add amenity to property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID),
+			zap.Error(err))
+		return err
+	}
+
+	s.lg.Debug("amenity added to property successfully",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID))
+	return nil
+}
+
+// RemoveAmenityFromProperty removes an amenity from a property
+func (s *PropertyService) RemoveAmenityFromProperty(propertyID uuid.UUID, amenityID int32) error {
+	s.lg.Debug("removing amenity from property",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID))
+
+	// Verify property exists
+	_, err := s.propertyRepo.GetByID(propertyID)
+	if err != nil {
+		s.lg.Warn("property not found", zap.String("property_id", propertyID.String()), zap.Error(err))
+		return err
+	}
+
+	// Remove amenity from property
+	err = s.propertyAmenityRepo.RemoveAmenityFromProperty(propertyID, amenityID)
+	if err != nil {
+		s.lg.Error("failed to remove amenity from property",
+			zap.String("property_id", propertyID.String()),
+			zap.Int32("amenity_id", amenityID),
+			zap.Error(err))
+		return err
+	}
+
+	s.lg.Debug("amenity removed from property successfully",
+		zap.String("property_id", propertyID.String()),
+		zap.Int32("amenity_id", amenityID))
+	return nil
+}
+
 func (s *PropertyService) loadPropertyRelations(response *dto.PropertyResponse, property *models.Property) {
 	// Load additional relations like managements and amenities if needed
 	// This can be implemented based on specific requirements

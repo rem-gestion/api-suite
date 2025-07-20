@@ -63,10 +63,13 @@ type PropertyManagementRepository interface {
 // PropertyAmenityRepository interface
 type PropertyAmenityRepository interface {
 	Create(amenity *models.PropertyAmenity) (*models.PropertyAmenity, error)
-	GetByPropertyAndAmenity(propertyID uuid.UUID, amenityID string) (*models.PropertyAmenity, error)
+	GetByPropertyAndAmenity(propertyID uuid.UUID, amenityID int32) (*models.PropertyAmenity, error)
 	GetByPropertyID(propertyID uuid.UUID) ([]models.PropertyAmenity, error)
+	ListByPropertyID(propertyID uuid.UUID) ([]*models.Amenity, error)
+	AddAmenityToProperty(propertyID uuid.UUID, amenityID int32, note string) error
+	RemoveAmenityFromProperty(propertyID uuid.UUID, amenityID int32) error
 	Update(amenity *models.PropertyAmenity) error
-	Delete(propertyID uuid.UUID, amenityID string) error
+	Delete(propertyID uuid.UUID, amenityID int32) error
 	BulkCreateForProperty(propertyID uuid.UUID, amenities []models.PropertyAmenity) error
 	BulkDeleteForProperty(propertyID uuid.UUID) error
 }

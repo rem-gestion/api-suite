@@ -229,6 +229,88 @@ func (c *PropertyController) BulkCreate(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response)
 }
 
+// ListPropertyAmenities - GET /properties/:id/amenities
+func (c *PropertyController) ListPropertyAmenities(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid property UUID format"})
+		return
+	}
+
+	amenities, err := c.service.ListPropertyAmenities(id)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, amenities)
+}
+
+// AddAmenityToProperty - POST /properties/:id/amenities
+func (c *PropertyController) AddAmenityToProperty(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	propertyID, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid property UUID format"})
+		return
+	}
+
+	var req struct {
+		AmenityID int32  `json:"amenity_id" form:"amenity_id" binding:"required"`
+		Note      string `json:"note" form:"note"`
+	}
+
+	// Try to bind from JSON first, then from query/form params
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		// If JSON binding fails, try form/query binding
+		if bindErr := ctx.ShouldBind(&req); bindErr != nil {
+			ctx.Error(&errors.BadRequestError{Msg: "amenity_id is required (can be sent in JSON body or as query parameter)"})
+			return
+		}
+	}
+
+	err = c.service.AddAmenityToProperty(propertyID, req.AmenityID, req.Note)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message":     "amenity added to property successfully",
+		"property_id": propertyID,
+		"amenity_id":  req.AmenityID,
+	})
+}
+
+// RemoveAmenityFromProperty - DELETE /properties/:id/amenities/:amenity_id
+func (c *PropertyController) RemoveAmenityFromProperty(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	propertyID, err := uuid.Parse(idStr)
+	if err != nil {
+		ctx.Error(&errors.BadRequestError{Msg: "invalid property UUID format"})
+		return
+	}
+
+	amenityID, err := parseInt32Param(ctx, "amenity_id")
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	err = c.service.RemoveAmenityFromProperty(propertyID, amenityID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":     "amenity removed from property successfully",
+		"property_id": propertyID,
+		"amenity_id":  amenityID,
+	})
+}
+
 // Utility function to parse int32 from string parameter
 func parseInt32Param(ctx *gin.Context, paramName string) (int32, error) {
 	paramStr := ctx.Param(paramName)
