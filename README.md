@@ -531,23 +531,67 @@ GET  /health/detailed # Estado del servicio
 
 **Responsabilidades**:
 - Gestión completa de propiedades inmobiliarias
-- Manejo de amenities/comodidades con categorías
-- Relaciones propiedades-amenities
-- Validación con address-svc y person-svc
+- Manejo de tipos de propiedad (departamentos, casas, locales, etc.)
+- Sistema completo de amenities con categorías
+- Gestión de property-managements y manager types
+- Relaciones entre propiedades y amenities
+- Validación con address-svc y person-svc vía gRPC
 
-**Tipos de propiedad**:
-- APARTMENT, HOUSE, COMMERCIAL_SPACE, OFFICE, LAND, INDUSTRIAL_WAREHOUSE
-
-**Categorías de amenities**:
-- Security, Recreation, Services, Transport, Healthcare, Education
+**Entidades principales**:
+- **Properties**: Propiedades con owner, dirección, tipo, características
+- **Property Types**: Tipos como departamento, casa, local comercial
+- **Amenities**: Comodidades categorizadas (seguridad, recreación, servicios, bienestar)
+- **Property Managements**: Gestión de propiedades con managers
+- **Manager Types**: Tipos de administradores de propiedades
 
 **Endpoints principales**:
 ```bash
-GET  /properties              # Listar propiedades
-POST /properties              # Crear propiedad
-GET  /properties/:id          # Obtener propiedad específica
-PUT  /properties/:id          # Actualizar propiedad
-DELETE /properties/:id        # Eliminar propiedad
+# Properties CRUD
+GET    /api/properties                    # Listar con filtros avanzados
+POST   /api/properties                    # Crear propiedad
+GET    /api/properties/:id                # Obtener propiedad específica
+PUT    /api/properties/:id                # Actualizar propiedad
+DELETE /api/properties/:id                # Eliminar propiedad
+GET    /api/properties/:id/full-details   # Detalles completos con amenities
+
+# Property Types
+GET    /api/property-types               # Listar tipos de propiedad
+POST   /api/property-types               # Crear nuevo tipo
+GET    /api/property-types/:id           # Obtener tipo específico
+PUT    /api/property-types/:id           # Actualizar tipo
+DELETE /api/property-types/:id           # Eliminar tipo
+
+# Property Management
+GET    /api/property-managements         # Listar gestiones
+POST   /api/property-managements         # Crear nueva gestión
+GET    /api/property-managements/:id     # Obtener gestión específica
+PUT    /api/property-managements/:id     # Actualizar gestión
+DELETE /api/property-managements/:id     # Eliminar gestión
+
+# Manager Types  
+GET    /api/manager-types                # Listar tipos de manager
+POST   /api/manager-types                # Crear nuevo tipo de manager
+
+# Amenities CRUD
+GET    /api/amenities                    # Listar amenities con filtros
+POST   /api/amenities                    # Crear amenity
+GET    /api/amenities/:id                # Obtener amenity específica
+PUT    /api/amenities/:id                # Actualizar amenity
+DELETE /api/amenities/:id                # Eliminar amenity
+
+# Property-Amenity Relations
+GET    /api/properties/:id/amenities          # Amenities de una propiedad
+POST   /api/properties/:id/amenities          # Agregar amenity a propiedad
+DELETE /api/properties/:id/amenities/:aid     # Quitar amenity de propiedad
+```
+
+**Características especiales**:
+- 🏗️ **Códigos internos únicos**: Generación automática de códigos de propiedad
+- 🔗 **Integración externa**: Validación con address-svc y person-svc vía gRPC
+- 🎯 **Servicios mock**: Para desarrollo independiente sin dependencias
+- ✨ **Sistema de categorías**: Amenities organizadas por categoría
+- 🔄 **Filtros avanzados**: Búsqueda por precio, tipo, ubicación, características
+- 📊 **Datos completos**: Full-details endpoint con toda la información relacionada
 GET  /amenities               # Listar amenities
 POST /amenities               # Crear amenity
 POST /manage/:property_id/amenities/:amenity_id  # Asociar amenity

@@ -219,3 +219,280 @@ INSERT INTO amenity (name, category) VALUES
   ('Deck', 'comfort'),
   ('Jacuzzi', 'comfort'),
   ('Hidromasaje', 'comfort');
+
+-- Insert example properties
+INSERT INTO property (
+  id, 
+  owner_person_id, 
+  address_id, 
+  property_type_id, 
+  internal_code,
+  year_built,
+  bedrooms,
+  bathrooms,
+  total_area_sqm,
+  covered_area_sqm,
+  description
+) VALUES
+  -- Departamento moderno en Palermo
+  (
+    '550e8400-e29b-41d4-a716-446655440001',
+    '550e8400-e29b-41d4-a716-446655440101', -- owner_person_id
+    '550e8400-e29b-41d4-a716-446655440201', -- address_id
+    1, -- APARTMENT
+    'APT-PAL-001',
+    2019,
+    2,
+    1.0,
+    75.50,
+    65.00,
+    'Moderno departamento de 2 ambientes en el corazón de Palermo. Luminoso, con balcón y excelente distribución. Edificio con amenities: gimnasio, terraza, parrilla común. A metros del subte y centros comerciales.'
+  ),
+  
+  -- Casa familiar en San Isidro
+  (
+    '550e8400-e29b-41d4-a716-446655440002',
+    '550e8400-e29b-41d4-a716-446655440102',
+    '550e8400-e29b-41d4-a716-446655440202',
+    2, -- HOUSE
+    'CSA-SI-002',
+    2005,
+    4,
+    3.0,
+    280.00,
+    180.00,
+    'Hermosa casa familiar en zona residencial de San Isidro. 4 dormitorios, 3 baños, living-comedor integrado, cocina moderna, quincho con parrilla, jardín con pileta. Garage para 2 autos. Ideal para familias.'
+  ),
+  
+  -- PH en Villa Crespo
+  (
+    '550e8400-e29b-41d4-a716-446655440003',
+    '550e8400-e29b-41d4-a716-446655440103',
+    '550e8400-e29b-41d4-a716-446655440203',
+    3, -- PH
+    'PH-VC-003',
+    1995,
+    3,
+    2.0,
+    120.00,
+    90.00,
+    'PH de 3 ambientes con terraza propia. Totalmente refaccionado, muy luminoso. Terraza de 30m2 con parrilla. Ubicado en zona tranquila con fácil acceso a transporte público.'
+  ),
+  
+  -- Quinta vacacional en Tigre
+  (
+    '550e8400-e29b-41d4-a716-446655440004',
+    '550e8400-e29b-41d4-a716-446655440104',
+    '550e8400-e29b-41d4-a716-446655440204',
+    4, -- VACATION_HOME
+    'QTA-TIG-004',
+    2010,
+    3,
+    2.0,
+    450.00,
+    150.00,
+    'Quinta familiar en Tigre con amplio parque y dock privado. Casa principal de 3 dormitorios, quincho independiente, pileta, muelle propio. Ideal para descanso y actividades náuticas.'
+  ),
+  
+  -- Local comercial en Microcentro
+  (
+    '550e8400-e29b-41d4-a716-446655440005',
+    '550e8400-e29b-41d4-a716-446655440105',
+    '550e8400-e29b-41d4-a716-446655440205',
+    9, -- COMMERCIAL_STORE
+    'LOC-MC-005',
+    1980,
+    0,
+    1.0,
+    85.00,
+    85.00,
+    'Local comercial en pleno Microcentro, sobre avenida principal. Amplia vidriera, excelente ubicación para cualquier tipo de comercio. Alto tránsito peatonal. Baño y depósito.'
+  ),
+  
+  -- Oficina corporativa en Puerto Madero
+  (
+    '550e8400-e29b-41d4-a716-446655440006',
+    '550e8400-e29b-41d4-a716-446655440106',
+    '550e8400-e29b-41d4-a716-446655440206',
+    8, -- COMMERCIAL_OFFICE
+    'OFC-PM-006',
+    2015,
+    0,
+    2.0,
+    320.00,
+    320.00,
+    'Oficina premium en edificio corporativo de Puerto Madero. Piso completo con vista al río. Incluye 8 oficinas privadas, sala de reuniones, recepción, kitchenette. 4 cocheras incluidas.'
+  ),
+  
+  -- Galpón industrial en Avellaneda
+  (
+    '550e8400-e29b-41d4-a716-446655440007',
+    '550e8400-e29b-41d4-a716-446655440107',
+    '550e8400-e29b-41d4-a716-446655440207',
+    11, -- WAREHOUSE_STORAGE
+    'GAL-AVE-007',
+    2000,
+    0,
+    1.0,
+    1500.00,
+    1200.00,
+    'Galpón industrial con nave de 1200m2 cubiertos más 300m2 de playón descubierto. Altura libre 8 metros, portón de acceso para camiones, oficina administrativa, vestuarios. Ideal logística.'
+  ),
+  
+  -- Terreno urbano en Nordelta
+  (
+    '550e8400-e29b-41d4-a716-446655440008',
+    '550e8400-e29b-41d4-a716-446655440108',
+    '550e8400-e29b-41d4-a716-446655440208',
+    7, -- LAND
+    'TER-NDL-008',
+    NULL,
+    0,
+    0,
+    800.00,
+    0.00,
+    'Lote en barrio privado Nordelta con vista al agua. 800m2, con todos los servicios disponibles. Apto para construcción de casa familiar. Seguridad 24hs, amenities del barrio incluidos.'
+  ),
+  
+  -- Consultorio médico en Recoleta
+  (
+    '550e8400-e29b-41d4-a716-446655440009',
+    '550e8400-e29b-41d4-a716-446655440109',
+    '550e8400-e29b-41d4-a716-446655440209',
+    12, -- CLINIC
+    'CON-REC-009',
+    1990,
+    0,
+    1.0,
+    65.00,
+    65.00,
+    'Consultorio médico en edificio profesional de Recoleta. Totalmente equipado, sala de espera, consultorio principal, baño privado. Excelente ubicación cerca de hospitales y clínicas.'
+  ),
+  
+  -- Cochera cubierta en Belgrano
+  (
+    '550e8400-e29b-41d4-a716-446655440010',
+    '550e8400-e29b-41d4-a716-446655440110',
+    '550e8400-e29b-41d4-a716-446655440210',
+    13, -- GARAGE
+    'COC-BEL-010',
+    2008,
+    0,
+    0,
+    25.00,
+    25.00,
+    'Cochera cubierta en edificio de Belgrano. Fácil acceso, ubicación central, portón automático. Ideal para resguardar vehículo en zona de alta demanda de estacionamiento.'
+  );
+
+-- Insert example property management relationships
+INSERT INTO property_management (
+  id,
+  property_id,
+  manager_id,
+  manager_type_id,
+  start_date,
+  commission_percentage
+) VALUES
+  -- Gestión por persona individual
+  (
+    '650e8400-e29b-41d4-a716-446655440001',
+    '550e8400-e29b-41d4-a716-446655440001', -- Departamento Palermo
+    '650e8400-e29b-41d4-a716-446655440301', -- manager_id (persona)
+    1, -- PERSON
+    '2024-01-15',
+    3.50
+  ),
+  
+  -- Gestión por organización inmobiliaria
+  (
+    '650e8400-e29b-41d4-a716-446655440002',
+    '550e8400-e29b-41d4-a716-446655440002', -- Casa San Isidro
+    '650e8400-e29b-41d4-a716-446655440401', -- manager_id (organización)
+    2, -- ORGANIZATION
+    '2024-02-01',
+    4.00
+  ),
+  
+  -- Gestión corporativa para oficina
+  (
+    '650e8400-e29b-41d4-a716-446655440003',
+    '550e8400-e29b-41d4-a716-446655440006', -- Oficina Puerto Madero
+    '650e8400-e29b-41d4-a716-446655440402', -- manager_id (organización)
+    2, -- ORGANIZATION
+    '2024-01-01',
+    5.00
+  ),
+  
+  -- Gestión de galpón industrial
+  (
+    '650e8400-e29b-41d4-a716-446655440004',
+    '550e8400-e29b-41d4-a716-446655440007', -- Galpón Avellaneda
+    '650e8400-e29b-41d4-a716-446655440302', -- manager_id (persona especialista)
+    1, -- PERSON
+    '2024-03-01',
+    4.50
+  );
+
+-- Insert example property amenities relationships
+INSERT INTO property_amenities (property_id, amenity_id, note) VALUES
+  -- Departamento Palermo (moderno, con amenities)
+  ('550e8400-e29b-41d4-a716-446655440001', '6', 'Balcón con vista a la calle'),    -- Balcón
+  ('550e8400-e29b-41d4-a716-446655440001', '13', 'Luminoso por orientación norte'), -- Luminoso
+  ('550e8400-e29b-41d4-a716-446655440001', '31', 'Aire split en dormitorios'),     -- Aire Acondicionado
+  ('550e8400-e29b-41d4-a716-446655440001', '38', 'Ascensor de alta velocidad'),    -- Ascensor
+  ('550e8400-e29b-41d4-a716-446655440001', '74', 'Gimnasio completo en terraza'),  -- Gimnasio
+  ('550e8400-e29b-41d4-a716-446655440001', '71', 'A estrenar, entrega inmediata'), -- A Estrenar
+  
+  -- Casa San Isidro (familiar, con jardín y pileta)
+  ('550e8400-e29b-41d4-a716-446655440002', '9', 'Jardín con césped y plantas'),     -- Jardín
+  ('550e8400-e29b-41d4-a716-446655440002', '12', 'Pileta climatizada 8x4 metros'),   -- Pileta
+  ('550e8400-e29b-41d4-a716-446655440002', '10', 'Quincho con parrilla y horno'),    -- Quincho
+  ('550e8400-e29b-41d4-a716-446655440002', '14', 'Cochera para 2 autos'),           -- Cochera
+  ('550e8400-e29b-41d4-a716-446655440002', '16', 'Lavadero independiente'),         -- Lavadero
+  ('550e8400-e29b-41d4-a716-446655440002', '32', 'Calefacción central por radiadores'), -- Calefacción Central
+  ('550e8400-e29b-41d4-a716-446655440002', '74', 'En muy buen estado'),             -- Muy Bueno
+  
+  -- PH Villa Crespo (con terraza)
+  ('550e8400-e29b-41d4-a716-446655440003', '7', 'Terraza de 30m2 con pérgola'),     -- Terraza
+  ('550e8400-e29b-41d4-a716-446655440003', '11', 'Parrilla en terraza'),            -- Parrilla
+  ('550e8400-e29b-41d4-a716-446655440003', '13', 'Muy luminoso, orientación norte'), -- Luminoso
+  ('550e8400-e29b-41d4-a716-446655440003', '70', 'Totalmente reciclado'),           -- Reciclado
+  
+  -- Quinta Tigre (con muelle y parque)
+  ('550e8400-e29b-41d4-a716-446655440004', '9', 'Parque de 300m2 con árboles'),     -- Jardín
+  ('550e8400-e29b-41d4-a716-446655440004', '12', 'Pileta de natación'),             -- Pileta
+  ('550e8400-e29b-41d4-a716-446655440004', '10', 'Quincho para 20 personas'),       -- Quincho
+  ('550e8400-e29b-41d4-a716-446655440004', '18', 'Vista al río y canales'),         -- Vista al Mar (río)
+  ('550e8400-e29b-41d4-a716-446655440004', '81', 'Deck de madera en muelle'),       -- Deck
+  
+  -- Local comercial Microcentro
+  ('550e8400-e29b-41d4-a716-446655440005', '5', 'Sobre avenida principal'),         -- Frente
+  ('550e8400-e29b-41d4-a716-446655440005', '13', 'Mucha luz natural'),              -- Luminoso
+  ('550e8400-e29b-41d4-a716-446655440005', '1', 'Ideal para cualquier rubro'),      -- Apto Crédito
+  
+  -- Oficina Puerto Madero (corporativa)
+  ('550e8400-e29b-41d4-a716-446655440006', '19', 'Vista panorámica al río'),        -- Vista Panorámica
+  ('550e8400-e29b-41d4-a716-446655440006', '31', 'Aire acondicionado centralizado'), -- Aire Acondicionado
+  ('550e8400-e29b-41d4-a716-446655440006', '38', 'Ascensores de alta velocidad'),   -- Ascensor
+  ('550e8400-e29b-41d4-a716-446655440006', '57', 'Seguridad 24hs con recepcionista'), -- Seguridad 24hs
+  ('550e8400-e29b-41d4-a716-446655440006', '14', '4 cocheras cubiertas incluidas'), -- Cochera
+  
+  -- Galpón Avellaneda (industrial)
+  ('550e8400-e29b-41d4-a716-446655440007', '21', 'Entrada independiente para camiones'), -- Entrada Independiente
+  ('550e8400-e29b-41d4-a716-446655440007', '39', 'Montacargas para carga pesada'),      -- Montacargas
+  ('550e8400-e29b-41d4-a716-446655440007', '27', 'Electricidad trifásica'),             -- Electricidad
+  ('550e8400-e29b-41d4-a716-446655440007', '40', 'Generador de emergencia'),            -- Generador Eléctrico
+  
+  -- Terreno Nordelta
+  ('550e8400-e29b-41d4-a716-446655440008', '62', 'Barrio cerrado con amenities'),       -- Barrio Cerrado
+  ('550e8400-e29b-41d4-a716-446655440008', '57', 'Seguridad 24hs del barrio'),          -- Seguridad 24hs
+  ('550e8400-e29b-41d4-a716-446655440008', '19', 'Vista al canal'),                     -- Vista Panorámica
+  
+  -- Consultorio Recoleta
+  ('550e8400-e29b-41d4-a716-446655440009', '2', 'Habilitado para actividad profesional'), -- Apto Profesional
+  ('550e8400-e29b-41d4-a716-446655440009', '31', 'Aire acondicionado frío/calor'),        -- Aire Acondicionado
+  ('550e8400-e29b-41d4-a716-446655440009', '38', 'Edificio con ascensor'),                -- Ascensor
+  
+  -- Cochera Belgrano
+  ('550e8400-e29b-41d4-a716-446655440010', '56', 'Portón automático'),                    -- Portero Eléctrico
+  ('550e8400-e29b-41d4-a716-446655440010', '21', 'Acceso independiente');                 -- Entrada Independiente

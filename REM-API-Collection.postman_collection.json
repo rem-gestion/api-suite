@@ -813,7 +813,7 @@
 		},
 		{
 			"name": "🏢 Properties & Real Estate",
-			"description": "Property management: real estate properties, amenities, and property management",
+			"description": "Property management: real estate properties, amenities, property types, and property management",
 			"item": [
 				{
 					"name": "🏢 Properties Management",
@@ -828,10 +828,7 @@
 										"exec": [
 											"if (pm.response.code === 200) {",
 											"    const response = pm.response.json();",
-											"    if (Array.isArray(response) && response.length > 0) {",
-											"        pm.environment.set('property_id', response[0].id);",
-											"        console.log('First property ID saved:', response[0].id);",
-											"    } else if (response.data && response.data.length > 0) {",
+											"    if (response.data && response.data.length > 0) {",
 											"        pm.environment.set('property_id', response.data[0].id);",
 											"        console.log('First property ID saved:', response.data[0].id);",
 											"    }",
@@ -844,7 +841,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/api/properties?page=1&per_page=10&property_type=APARTMENT&search=",
+									"raw": "{{base_url}}/api/properties?page=1&limit=10&owner_person_id={{person_id}}",
 									"host": ["{{base_url}}"],
 									"path": ["api", "properties"],
 									"query": [
@@ -853,23 +850,18 @@
 											"value": "1"
 										},
 										{
-											"key": "per_page",
+											"key": "limit",
 											"value": "10"
 										},
 										{
-											"key": "property_type",
-											"value": "APARTMENT",
-											"description": "Filter by type: APARTMENT, HOUSE, COMMERCIAL_SPACE, OFFICE, LAND, INDUSTRIAL_WAREHOUSE"
-										},
-										{
-											"key": "search",
-											"value": "",
-											"description": "Search by description or internal code"
-										},
-										{
 											"key": "owner_person_id",
+											"value": "{{person_id}}",
+											"description": "Filter by owner person ID"
+										},
+										{
+											"key": "property_type_id",
 											"value": "",
-											"description": "Filter by owner person ID",
+											"description": "Filter by property type ID",
 											"disabled": true
 										}
 									]
@@ -888,7 +880,7 @@
 									"host": ["{{base_url}}"],
 									"path": ["api", "properties", "{{property_id}}"]
 								},
-								"description": "Get property details by ID with amenities and management info"
+								"description": "Get property details by ID"
 							},
 							"response": []
 						},
@@ -918,14 +910,14 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"owner_person_id\": \"{{person_id}}\",\n  \"address_id\": \"{{address_id}}\",\n  \"property_type\": \"APARTMENT\",\n  \"internal_code\": \"DEPT-{{$timestamp}}\",\n  \"year_built\": 2020,\n  \"bedrooms\": 2,\n  \"bathrooms\": 1.5,\n  \"total_area_sqm\": 85.50,\n  \"covered_area_sqm\": 75.00,\n  \"description\": \"Departamento moderno en zona céntrica con vista panorámica\",\n  \"management\": {\n    \"organization_id\": \"99999999-9999-9999-9999-999999999999\",\n    \"commission_percent\": 3.5,\n    \"notes\": \"Gestión estándar con comisión por alquiler\"\n  },\n  \"amenity_ids\": [\n    \"11111111-1111-1111-1111-111111111111\",\n    \"22222222-2222-2222-2222-222222222222\"\n  ]\n}"
+									"raw": "{\n  \"owner_person_id\": \"{{person_id}}\",\n  \"address_id\": \"{{address_id}}\",\n  \"property_type_id\": 1,\n  \"internal_code\": \"DEPT-{{$timestamp}}\",\n  \"year_built\": 2023,\n  \"bedrooms\": 3,\n  \"bathrooms\": 2.5,\n  \"total_area_sqm\": 95.75,\n  \"covered_area_sqm\": 85.50,\n  \"description\": \"Departamento moderno de 3 ambientes con vista al parque, excelente ubicación y amenities completos\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/api/properties",
 									"host": ["{{base_url}}"],
 									"path": ["api", "properties"]
 								},
-								"description": "Create a new property with optional management and amenities.\n\n**Property Types:**\n- APARTMENT: Departamento\n- HOUSE: Casa\n- COMMERCIAL_SPACE: Local comercial\n- OFFICE: Oficina\n- LAND: Terreno\n- INDUSTRIAL_WAREHOUSE: Nave industrial\n\n**Mock IDs for testing:**\n- owner_person_id: Use {{person_id}} from persons\n- address_id: Use {{address_id}} from addresses\n- organization_id: 99999999-9999-9999-9999-999999999999 (mock)\n- amenity_ids: Check amenities list for valid IDs"
+								"description": "Create a new property with pre-filled data ready to execute"
 							},
 							"response": []
 						},
@@ -941,14 +933,14 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"property_type\": \"HOUSE\",\n  \"year_built\": 2021,\n  \"bedrooms\": 3,\n  \"bathrooms\": 2.0,\n  \"total_area_sqm\": 120.00,\n  \"covered_area_sqm\": 100.00,\n  \"description\": \"Casa amplia con jardín y cochera\"\n}"
+									"raw": "{\n  \"year_built\": 2024,\n  \"bedrooms\": 4,\n  \"bathrooms\": 3.0,\n  \"total_area_sqm\": 120.00,\n  \"covered_area_sqm\": 105.00,\n  \"description\": \"Departamento ampliado con 4 ambientes, renovado completamente en 2024\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/api/properties/{{property_id}}",
 									"host": ["{{base_url}}"],
 									"path": ["api", "properties", "{{property_id}}"]
 								},
-								"description": "Update property information"
+								"description": "Update property information with pre-filled data"
 							},
 							"response": []
 						},
@@ -962,7 +954,435 @@
 									"host": ["{{base_url}}"],
 									"path": ["api", "properties", "{{property_id}}"]
 								},
-								"description": "Delete a property"
+								"description": "Soft delete a property (sets deleted_at timestamp)"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Search Properties",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.length > 0) {",
+											"        pm.environment.set('property_id', response.data[0].id);",
+											"        console.log('First property ID from search saved:', response.data[0].id);",
+											"    }",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/properties/search?q=departamento&page=1&limit=10&bedrooms=3",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "search"],
+									"query": [
+										{
+											"key": "q",
+											"value": "departamento",
+											"description": "Search query in description and internal_code"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "bedrooms",
+											"value": "3",
+											"description": "Filter by number of bedrooms"
+										},
+										{
+											"key": "bathrooms",
+											"value": "",
+											"description": "Filter by number of bathrooms",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Search properties by query string and filters"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "🏷️ Property Types",
+					"description": "CRUD operations for property types catalog",
+					"item": [
+						{
+							"name": "📋 List Property Types",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.length > 0) {",
+											"        pm.environment.set('property_type_id', response.data[0].id);",
+											"        console.log('First property type ID saved:', response.data[0].id);",
+											"    }",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-types?page=1&limit=20&is_active=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-types"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "is_active",
+											"value": "true",
+											"description": "Filter by active status"
+										}
+									]
+								},
+								"description": "List all property types. Auto-saves first property type ID."
+							},
+							"response": []
+						},
+						{
+							"name": "�️ Get Property Type by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-types/{{property_type_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-types", "{{property_type_id}}"]
+								},
+								"description": "Get property type details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Create Property Type",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.environment.set('property_type_id', response.id);",
+											"    console.log('New property type ID saved:', response.id);",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"PENTH\",\n  \"name\": \"Penthouse\",\n  \"description\": \"Departamento en último piso con terraza propia y vista panorámica\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/property-types",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-types"]
+								},
+								"description": "Create a new property type with pre-filled data"
+							},
+							"response": []
+						},
+						{
+							"name": "📝 Update Property Type",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Penthouse Premium\",\n  \"description\": \"Departamento premium en último piso con terraza propia, jacuzzi y vista panorámica de 360 grados\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/property-types/{{property_type_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-types", "{{property_type_id}}"]
+								},
+								"description": "Update property type information with pre-filled data"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Property Type",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-types/{{property_type_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-types", "{{property_type_id}}"]
+								},
+								"description": "Delete a property type"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "🏢 Property Management",
+					"description": "Property management assignments and commissions",
+					"item": [
+						{
+							"name": "📋 List Property Managements",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.length > 0) {",
+											"        pm.environment.set('property_management_id', response.data[0].id);",
+											"        console.log('First property management ID saved:', response.data[0].id);",
+											"    }",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-managements?page=1&limit=10&property_id={{property_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-managements"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "property_id",
+											"value": "{{property_id}}",
+											"description": "Filter by property ID"
+										},
+										{
+											"key": "manager_type_id",
+											"value": "",
+											"description": "Filter by manager type ID",
+											"disabled": true
+										}
+									]
+								},
+								"description": "List property management assignments. Auto-saves first management ID."
+							},
+							"response": []
+						},
+						{
+							"name": "🏢 Get Property Management by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-managements/{{property_management_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-managements", "{{property_management_id}}"]
+								},
+								"description": "Get property management details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Create Property Management",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.environment.set('property_management_id', response.id);",
+											"    console.log('New property management ID saved:', response.id);",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"property_id\": \"{{property_id}}\",\n  \"manager_type_id\": 1,\n  \"manager_person_id\": \"{{person_id}}\",\n  \"start_date\": \"2024-01-01T00:00:00Z\",\n  \"commission_percentage\": 4.5\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/property-managements",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-managements"]
+								},
+								"description": "Create a property management assignment with pre-filled data"
+							},
+							"response": []
+						},
+						{
+							"name": "📝 Update Property Management",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"commission_percentage\": 5.0,\n  \"end_date\": \"2024-12-31T23:59:59Z\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/property-managements/{{property_management_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-managements", "{{property_management_id}}"]
+								},
+								"description": "Update property management with pre-filled data"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Property Management",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/property-managements/{{property_management_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "property-managements", "{{property_management_id}}"]
+								},
+								"description": "Delete a property management assignment"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "👔 Manager Types",
+					"description": "CRUD operations for manager types catalog",
+					"item": [
+						{
+							"name": "📋 List Manager Types",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.length > 0) {",
+											"        pm.environment.set('manager_type_id', response.data[0].id);",
+											"        console.log('First manager type ID saved:', response.data[0].id);",
+											"    }",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/manager-types?page=1&limit=20&is_active=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "manager-types"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "is_active",
+											"value": "true",
+											"description": "Filter by active status"
+										}
+									]
+								},
+								"description": "List all manager types. Auto-saves first manager type ID."
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Create Manager Type",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.environment.set('manager_type_id', response.id);",
+											"    console.log('New manager type ID saved:', response.id);",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"INMOB\",\n  \"name\": \"Inmobiliaria\",\n  \"description\": \"Empresa inmobiliaria especializada en administración de propiedades\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/manager-types",
+									"host": ["{{base_url}}"],
+									"path": ["api", "manager-types"]
+								},
+								"description": "Create a new manager type with pre-filled data"
 							},
 							"response": []
 						}
@@ -981,10 +1401,7 @@
 										"exec": [
 											"if (pm.response.code === 200) {",
 											"    const response = pm.response.json();",
-											"    if (Array.isArray(response) && response.length > 0) {",
-											"        pm.environment.set('amenity_id', response[0].id);",
-											"        console.log('First amenity ID saved:', response[0].id);",
-											"    } else if (response.data && response.data.length > 0) {",
+											"    if (response.data && response.data.length > 0) {",
 											"        pm.environment.set('amenity_id', response.data[0].id);",
 											"        console.log('First amenity ID saved:', response.data[0].id);",
 											"    }",
@@ -997,7 +1414,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/api/amenities?page=1&per_page=20&search=&category=seguridad",
+									"raw": "{{base_url}}/api/amenities?page=1&limit=20&category=recreacion",
 									"host": ["{{base_url}}"],
 									"path": ["api", "amenities"],
 									"query": [
@@ -1006,18 +1423,13 @@
 											"value": "1"
 										},
 										{
-											"key": "per_page",
+											"key": "limit",
 											"value": "20"
 										},
 										{
-											"key": "search",
-											"value": "",
-											"description": "Search by amenity name"
-										},
-										{
 											"key": "category",
-											"value": "seguridad",
-											"description": "Filter by category: seguridad, recreacion, servicios"
+											"value": "recreacion",
+											"description": "Filter by category: seguridad, recreacion, servicios, bienestar"
 										}
 									]
 								},
@@ -1065,14 +1477,14 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"name\": \"Terraza con Parrilla\",\n  \"description\": \"Terraza común con área de parrilla y mobiliario exterior\",\n  \"icon\": \"grill\",\n  \"category\": \"recreacion\"\n}"
+									"raw": "{\n  \"name\": \"Piscina Climatizada\",\n  \"category\": \"recreacion\",\n  \"icon_url\": \"https://example.com/icons/pool.svg\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/api/amenities",
 									"host": ["{{base_url}}"],
 									"path": ["api", "amenities"]
 								},
-								"description": "Create a new amenity.\n\n**Categories:**\n- seguridad: Security features\n- recreacion: Recreation facilities\n- servicios: Services and utilities\n- transporte: Transportation\n- bienestar: Wellness facilities"
+								"description": "Create a new amenity with pre-filled data.\n\n**Categories:**\n- seguridad: Security features\n- recreacion: Recreation facilities\n- servicios: Services and utilities\n- bienestar: Wellness facilities"
 							},
 							"response": []
 						},
@@ -1088,14 +1500,14 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"name\": \"Terraza con Parrilla Premium\",\n  \"description\": \"Terraza común con área de parrilla, mobiliario exterior y vista panorámica\",\n  \"icon\": \"grill-premium\",\n  \"category\": \"recreacion\"\n}"
+									"raw": "{\n  \"name\": \"Piscina Climatizada Premium\",\n  \"category\": \"recreacion\",\n  \"icon_url\": \"https://example.com/icons/pool-premium.svg\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/api/amenities/{{amenity_id}}",
 									"host": ["{{base_url}}"],
 									"path": ["api", "amenities", "{{amenity_id}}"]
 								},
-								"description": "Update amenity information"
+								"description": "Update amenity information with pre-filled data"
 							},
 							"response": []
 						},
@@ -1116,20 +1528,43 @@
 					]
 				},
 				{
-					"name": "🔗 Property-Amenity Relations",
+					"name": "� Property-Amenity Relations",
 					"description": "Manage relationships between properties and amenities",
 					"item": [
+						{
+							"name": "📋 List Property Amenities",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/properties/{{property_id}}/amenities",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "{{property_id}}", "amenities"]
+								},
+								"description": "Get all amenities for a specific property"
+							},
+							"response": []
+						},
 						{
 							"name": "➕ Add Amenity to Property",
 							"request": {
 								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/api/properties/manage/{{property_id}}/amenities/{{amenity_id}}",
-									"host": ["{{base_url}}"],
-									"path": ["api", "properties", "manage", "{{property_id}}", "amenities", "{{amenity_id}}"]
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"amenity_id\": \"{{amenity_id}}\"\n}"
 								},
-								"description": "Add an amenity to a property. Creates relationship between property and amenity."
+								"url": {
+									"raw": "{{base_url}}/api/properties/{{property_id}}/amenities",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "{{property_id}}", "amenities"]
+								},
+								"description": "Add an amenity to a property with pre-filled amenity ID"
 							},
 							"response": []
 						},
@@ -1139,11 +1574,11 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/api/properties/manage/{{property_id}}/amenities/{{amenity_id}}",
+									"raw": "{{base_url}}/api/properties/{{property_id}}/amenities/{{amenity_id}}",
 									"host": ["{{base_url}}"],
-									"path": ["api", "properties", "manage", "{{property_id}}", "amenities", "{{amenity_id}}"]
+									"path": ["api", "properties", "{{property_id}}", "amenities", "{{amenity_id}}"]
 								},
-								"description": "Remove an amenity from a property. Deletes relationship between property and amenity."
+								"description": "Remove an amenity from a property"
 							},
 							"response": []
 						}
@@ -1382,7 +1817,7 @@
 								"url": {
 									"raw": "{{property_service_url}}/amenities/?page=1&per_page=10",
 									"host": ["{{property_service_url}}"],
-									"path": ["amenities", ""],
+									"path": ["api", "amenities", ""],
 									"query": [
 										{
 											"key": "page",
