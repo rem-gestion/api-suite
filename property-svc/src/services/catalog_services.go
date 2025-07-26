@@ -69,7 +69,7 @@ func (s *PropertyTypeService) GetByCode(code string) (*dto.PropertyTypeResponse,
 
 func (s *PropertyTypeService) List(isActive *bool, page, limit int) (*dto.ListResponse, error) {
 	offset := (page - 1) * limit
-	propertyTypes, total, err := s.repo.List(isActive, limit, offset)
+	propertyTypes, total, err := s.repo.List(nil, isActive, limit, offset)
 	if err != nil {
 		s.lg.Warn("list property types failed", zap.Error(err))
 		return nil, err
@@ -325,7 +325,7 @@ func (s *AmenityService) GetByID(id int32) (*dto.AmenityResponse, error) {
 
 func (s *AmenityService) List(category *models.AmenityCategory, page, limit int) (*dto.ListResponse, error) {
 	offset := (page - 1) * limit
-	amenities, total, err := s.repo.List(category, limit, offset)
+	amenities, total, err := s.repo.List(category, nil, limit, offset)
 	if err != nil {
 		s.lg.Warn("list amenities failed", zap.Error(err))
 		return nil, err

@@ -17,6 +17,9 @@ type PropertyService struct {
 	propertyTypeRepo       repository.PropertyTypeRepository
 	propertyManagementRepo repository.PropertyManagementRepository
 	propertyAmenityRepo    repository.PropertyAmenityRepository
+	propertyListingRepo    repository.PropertyListingRepository
+	propertyMediaRepo      repository.PropertyMediaRepository
+	propertyValuationRepo  repository.PropertyValuationRepository
 	clientManager          *clients.ClientManager
 	lg                     *zap.Logger
 }
@@ -26,6 +29,9 @@ func NewPropertyService(
 	propertyTypeRepo repository.PropertyTypeRepository,
 	propertyManagementRepo repository.PropertyManagementRepository,
 	propertyAmenityRepo repository.PropertyAmenityRepository,
+	propertyListingRepo repository.PropertyListingRepository,
+	propertyMediaRepo repository.PropertyMediaRepository,
+	propertyValuationRepo repository.PropertyValuationRepository,
 	clientManager *clients.ClientManager,
 	lg *zap.Logger,
 ) *PropertyService {
@@ -34,6 +40,9 @@ func NewPropertyService(
 		propertyTypeRepo:       propertyTypeRepo,
 		propertyManagementRepo: propertyManagementRepo,
 		propertyAmenityRepo:    propertyAmenityRepo,
+		propertyListingRepo:    propertyListingRepo,
+		propertyMediaRepo:      propertyMediaRepo,
+		propertyValuationRepo:  propertyValuationRepo,
 		clientManager:          clientManager,
 		lg:                     lg.Named("property-service"),
 	}

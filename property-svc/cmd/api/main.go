@@ -80,6 +80,9 @@ func main() {
 	amenityRepo := repository.NewAmenityRepo(pg, lg)
 	propertyManagementRepo := repository.NewPropertyManagementRepo(pg, lg)
 	propertyAmenityRepo := repository.NewPropertyAmenityRepo(pg, lg)
+	propertyListingRepo := repository.NewPropertyListingRepo(pg, lg)
+	propertyMediaRepo := repository.NewPropertyMediaRepo(pg, lg)
+	propertyValuationRepo := repository.NewPropertyValuationRepo(pg, lg)
 
 	/* ---------- services ---------- */
 	propertyService := services.NewPropertyService(
@@ -87,6 +90,9 @@ func main() {
 		propertyTypeRepo,
 		propertyManagementRepo,
 		propertyAmenityRepo,
+		propertyListingRepo,
+		propertyMediaRepo,
+		propertyValuationRepo,
 		clientManager,
 		lg,
 	)
@@ -94,6 +100,9 @@ func main() {
 	managerTypeService := services.NewManagerTypeService(managerTypeRepo, lg)
 	amenityService := services.NewAmenityService(amenityRepo, lg)
 	propertyManagementService := services.NewPropertyManagementService(propertyManagementRepo, clientManager, lg)
+	propertyListingService := services.NewPropertyListingService(propertyListingRepo, propertyRepo, clientManager, lg)
+	propertyMediaService := services.NewPropertyMediaService(propertyMediaRepo, propertyRepo, clientManager, lg)
+	propertyValuationService := services.NewPropertyValuationService(propertyValuationRepo, propertyRepo, clientManager, lg)
 
 	/* ---------- controllers ---------- */
 	propertyController := controllers.NewPropertyController(propertyService)
@@ -101,9 +110,21 @@ func main() {
 	managerTypeController := controllers.NewManagerTypeController(managerTypeService)
 	amenityController := controllers.NewAmenityController(amenityService)
 	propertyManagementController := controllers.NewPropertyManagementController(propertyManagementService)
+	propertyListingController := controllers.NewPropertyListingController(propertyListingService)
+	propertyMediaController := controllers.NewPropertyMediaController(propertyMediaService)
+	propertyValuationController := controllers.NewPropertyValuationController(propertyValuationService)
 
 	/* ---------- router ---------- */
-	appRouter := router.New(propertyController, propertyTypeController, managerTypeController, amenityController, propertyManagementController)
+	appRouter := router.New(
+		propertyController,
+		propertyTypeController,
+		managerTypeController,
+		amenityController,
+		propertyManagementController,
+		propertyListingController,
+		propertyMediaController,
+		propertyValuationController,
+	)
 
 	/* ---------- HTTP ---------- */
 	gin.SetMode(gin.ReleaseMode)
@@ -125,16 +146,33 @@ func main() {
 	/* ---------- gRPC server ---------- */
 	grpcServer := server.NewPropertyGRPCServer(propertyService, lg)
 
+	// TODO: Combined gRPC server for new services - will be implemented after PostMan
+	// combinedGRPCServer := server.NewCombinedGRPCServer(
+	//     propertyListingService,
+	//     propertyMediaService,
+	//     propertyValuationService,
+	//     lg,
+	// )
+
 	httpSrv := &http.Server{Addr: fmt.Sprintf(":%d", serverPort), Handler: r}
 
 	/* ---------- lanzar servidores ---------- */
-	// Start gRPC server
+	// Start original gRPC server (property service)
 	go func() {
 		lg.Info("gRPC listening", zap.String("addr", fmt.Sprintf("0.0.0.0:%d", grpcPort)))
 		if err := grpcServer.Start(grpcPort); err != nil {
 			lg.Fatal("gRPC failed", zap.Error(err))
 		}
 	}()
+
+	// TODO: Start new combined gRPC server (new services) on a different port
+	// newGrpcPort := grpcPort + 1
+	// go func() {
+	//     lg.Info("Combined gRPC listening", zap.String("addr", fmt.Sprintf("0.0.0.0:%d", newGrpcPort)))
+	//     if err := combinedGRPCServer.Start(newGrpcPort); err != nil {
+	//         lg.Fatal("Combined gRPC failed", zap.Error(err))
+	//     }
+	// }()
 
 	// Start HTTP server
 	go func() {
@@ -152,6 +190,8 @@ func main() {
 
 	// Stop gRPC server
 	grpcServer.Stop()
+	// TODO: Stop combined gRPC server when implemented
+	// combinedGRPCServer.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -55,11 +55,15 @@ func (r *PropertyTypeRepo) GetByCode(code string) (*models.PropertyType, error) 
 	return &propertyType, nil
 }
 
-func (r *PropertyTypeRepo) List(isActive *bool, limit, offset int) ([]models.PropertyType, int64, error) {
+func (r *PropertyTypeRepo) List(category *string, isActive *bool, limit, offset int) ([]models.PropertyType, int64, error) {
 	var propertyTypes []models.PropertyType
 	var total int64
 
 	query := r.db.Model(&models.PropertyType{})
+
+	if category != nil {
+		query = query.Where("category = ?", *category)
+	}
 
 	if isActive != nil {
 		query = query.Where("is_active = ?", *isActive)
@@ -241,7 +245,7 @@ func (r *AmenityRepo) GetByName(name string) (*models.Amenity, error) {
 	return &amenity, nil
 }
 
-func (r *AmenityRepo) List(category *models.AmenityCategory, limit, offset int) ([]models.Amenity, int64, error) {
+func (r *AmenityRepo) List(category *models.AmenityCategory, isActive *bool, limit, offset int) ([]models.Amenity, int64, error) {
 	var amenities []models.Amenity
 	var total int64
 
@@ -249,6 +253,10 @@ func (r *AmenityRepo) List(category *models.AmenityCategory, limit, offset int) 
 
 	if category != nil {
 		query = query.Where("category = ?", *category)
+	}
+
+	if isActive != nil {
+		query = query.Where("is_active = ?", *isActive)
 	}
 
 	// Count total

@@ -13,7 +13,10 @@ type TableResolver struct {
 
 // NewTableResolver crea un nuevo resolvedor de tablas
 func NewTableResolver(serviceName string) *TableResolver {
-	env := os.Getenv("ENVIRONMENT")
+	env := os.Getenv("REM_ENVIRONMENT")
+	if env == "" {
+		env = os.Getenv("ENVIRONMENT")
+	}
 	if env == "" {
 		env = "development"
 	}
@@ -57,9 +60,10 @@ func (tr *TableResolver) TableNameFunc(baseName string) func() string {
 
 // Global resolvers para cada servicio
 var (
-	PersonTableResolver  *TableResolver
-	AddressTableResolver *TableResolver
-	AuthTableResolver    *TableResolver
+	PersonTableResolver   *TableResolver
+	AddressTableResolver  *TableResolver
+	AuthTableResolver     *TableResolver
+	PropertyTableResolver *TableResolver
 )
 
 // InitializeResolvers inicializa los resolvers globales
@@ -67,6 +71,7 @@ func InitializeResolvers() {
 	PersonTableResolver = NewTableResolver("person")
 	AddressTableResolver = NewTableResolver("address")
 	AuthTableResolver = NewTableResolver("auth")
+	PropertyTableResolver = NewTableResolver("property")
 }
 
 // Helper functions para uso directo
@@ -89,4 +94,11 @@ func GetAuthTableName(baseName string) string {
 		AuthTableResolver = NewTableResolver("auth")
 	}
 	return AuthTableResolver.GetTableName(baseName)
+}
+
+func GetPropertyTableName(baseName string) string {
+	if PropertyTableResolver == nil {
+		PropertyTableResolver = NewTableResolver("property")
+	}
+	return PropertyTableResolver.GetTableName(baseName)
 }
