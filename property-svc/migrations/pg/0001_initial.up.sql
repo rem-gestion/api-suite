@@ -4,12 +4,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Enum for amenity categories
 CREATE TYPE amenity_category AS ENUM ('general', 'services', 'environments', 'security', 'comfort');
 
--- Property type catalog table
 CREATE TABLE property_type (
   id                SERIAL PRIMARY KEY,
   code              VARCHAR(32) UNIQUE NOT NULL,
   name              VARCHAR(100) NOT NULL,
   description       TEXT,
+  category          VARCHAR(50),
   is_active         BOOLEAN DEFAULT TRUE,
   created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMP
@@ -39,7 +39,7 @@ CREATE TABLE property (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   owner_person_id       UUID NOT NULL,
   address_id            UUID UNIQUE NOT NULL,
-  property_type_id      INTEGER NOT NULL REFERENCES property_type(id),
+  property_type_id      INTEGER NOT NULL REFERENCES type(id),
   internal_code         VARCHAR(50),
   year_built            INTEGER,
   bedrooms              INTEGER,
@@ -53,15 +53,19 @@ CREATE TABLE property (
   deleted_at            TIMESTAMP
 );
 
--- Property management table
 CREATE TABLE property_management (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   property_id           UUID NOT NULL REFERENCES property(id),
   manager_id            UUID NOT NULL,
   manager_type_id       INTEGER NOT NULL REFERENCES manager_type(id),
+  organization_id       UUID,
   start_date            DATE NOT NULL,
   end_date              DATE,
+  is_active             BOOLEAN DEFAULT TRUE,
   commission_percentage DECIMAL(5,2),
+  fixed_fee             DECIMAL(10,2),
+  exclusive_management  BOOLEAN DEFAULT FALSE,
+  services_included     JSONB,
   created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMP,
   updated_by            UUID,
@@ -69,7 +73,7 @@ CREATE TABLE property_management (
 );
 
 -- Property amenities junction table
-CREATE TABLE property_property_amenities (
+CREATE TABLE property_amenities (
   property_id           UUID NOT NULL REFERENCES property(id),
   amenity_id            JSONB,
   note                  TEXT,
@@ -81,34 +85,34 @@ CREATE INDEX idx_property_owner ON property(owner_person_id);
 CREATE INDEX idx_property_type ON property(property_type_id);
 CREATE UNIQUE INDEX idx_property_internal_code ON property(internal_code) WHERE internal_code IS NOT NULL;
 
-CREATE INDEX idx_property_management_property ON property_management(property_id);
-CREATE INDEX idx_property_management_manager ON property_management(manager_id);
-CREATE INDEX idx_property_management_type ON property_management(manager_type_id);
-CREATE INDEX idx_property_management_dates ON property_management(property_id, start_date, end_date);
+CREATE INDEX idx_management_property ON management(property_id);
+CREATE INDEX idx_management_manager ON management(manager_id);
+CREATE INDEX idx_management_type ON management(manager_type_id);
+CREATE INDEX idx_management_dates ON management(property_id, start_date, end_date);
 
 -- Insert initial property types
-INSERT INTO property_type (code, name, description) VALUES
-  ('APARTMENT', 'Departamento', 'Departamento en edificio'),
-  ('HOUSE', 'Casa', 'Casa unifamiliar'),
-  ('PH', 'PH', 'Propiedad horizontal'),
-  ('VACATION_HOME', 'Quinta Vacacional', 'Propiedad para vacaciones'),
-  ('COUNTRYSIDE', 'Campo', 'Propiedad rural'),
-  ('TOMB', 'Bóveda, Nicho, Parcela', 'Propiedad funeraria'),
-  ('LAND', 'Terreno', 'Terreno sin construcciones'),
-  ('COMMERCIAL_OFFICE', 'Oficina Comercial', 'Espacio de oficina'),
-  ('COMMERCIAL_STORE', 'Local Comercial', 'Local comercial'),
-  ('BUILDING', 'Edificio', 'Edificio completo'),
-  ('WAREHOUSE_STORAGE', 'Bodega / Galpón', 'Espacio de almacenamiento'),
-  ('CLINIC', 'Consultorio', 'Espacio médico'),
-  ('GARAGE', 'Cochera', 'Plaza de garaje'),
-  ('STORAGE', 'Depósito', 'Depósito'),
-  ('BUSINESS_BACKGROUND', 'Fondo de Comercio', 'Fondo de comercio'),
-  ('HOTEL', 'Hotel', 'Establecimiento hotelero'),
-  ('BOAT_SLIP', 'Cama Náutica', 'Plaza de amarre'),
-  ('LAND_COMMERCIAL', 'Terreno Comercial', 'Terreno con uso comercial'),
-  ('LAND_INDUSTRIAL', 'Terreno Industrial', 'Terreno con uso industrial'),
-  ('WAREHOUSE_INDUSTRIAL', 'Galpón Industrial', 'Galpón para uso industrial'),
-  ('INDUSTRIAL_BUILDING', 'Nave Industrial', 'Edificación industrial');
+INSERT INTO type (code, name, description, category) VALUES
+  ('APARTMENT', 'Departamento', 'Departamento en edificio', 'residential'),
+  ('HOUSE', 'Casa', 'Casa unifamiliar', 'residential'),
+  ('PH', 'PH', 'Propiedad horizontal', 'residential'),
+  ('VACATION_HOME', 'Quinta Vacacional', 'Propiedad para vacaciones', 'residential'),
+  ('COUNTRYSIDE', 'Campo', 'Propiedad rural', 'residential'),
+  ('TOMB', 'Bóveda, Nicho, Parcela', 'Propiedad funeraria', 'residential'),
+  ('LAND', 'Terreno', 'Terreno sin construcciones', 'residential'),
+  ('COMMERCIAL_OFFICE', 'Oficina Comercial', 'Espacio de oficina', 'commercial'),
+  ('COMMERCIAL_STORE', 'Local Comercial', 'Local comercial', 'commercial'),
+  ('BUILDING', 'Edificio', 'Edificio completo', 'commercial'),
+  ('WAREHOUSE_STORAGE', 'Bodega / Galpón', 'Espacio de almacenamiento', 'industrial'),
+  ('CLINIC', 'Consultorio', 'Espacio médico', 'commercial'),
+  ('GARAGE', 'Cochera', 'Plaza de garaje', 'residential'),
+  ('STORAGE', 'Depósito', 'Depósito', 'industrial'),
+  ('BUSINESS_BACKGROUND', 'Fondo de Comercio', 'Fondo de comercio', 'commercial'),
+  ('HOTEL', 'Hotel', 'Establecimiento hotelero', 'commercial'),
+  ('BOAT_SLIP', 'Cama Náutica', 'Plaza de amarre', 'residential'),
+  ('LAND_COMMERCIAL', 'Terreno Comercial', 'Terreno con uso comercial', 'commercial'),
+  ('LAND_INDUSTRIAL', 'Terreno Industrial', 'Terreno con uso industrial', 'industrial'),
+  ('WAREHOUSE_INDUSTRIAL', 'Galpón Industrial', 'Galpón para uso industrial', 'industrial'),
+  ('INDUSTRIAL_BUILDING', 'Nave Industrial', 'Edificación industrial', 'industrial');
 
 -- Insert initial manager types
 INSERT INTO manager_type (code, name, description) VALUES
@@ -145,9 +149,8 @@ INSERT INTO amenity (name, category) VALUES
   ('Agua Corriente', 'services'),
   ('Gas Natural', 'services'),
   ('Gas Envasado', 'services'),
-  ('Electricidad', 'services'),
   ('Cloacas', 'services'),
-  ('Internet', 'services'),
+  ('APARTMENT', 'Departamento', 'Departamento en edificio', 'residential'),
   ('Cable', 'services'),
   ('Teléfono', 'services'),
   ('Aire Acondicionado', 'services'),
@@ -169,7 +172,6 @@ INSERT INTO amenity (name, category) VALUES
   ('Cocina', 'environments'),
   ('Cocina Integrada', 'environments'),
   ('Office', 'environments'),
-  ('Toilette', 'environments'),
   ('Hall de Distribución', 'environments'),
   ('Vestidor', 'environments'),
   ('Suite', 'environments'),
@@ -385,7 +387,7 @@ INSERT INTO property (
   );
 
 -- Insert example property management relationships
-INSERT INTO property_management (
+INSERT INTO management (
   id,
   property_id,
   manager_id,
@@ -434,7 +436,7 @@ INSERT INTO property_management (
   );
 
 -- Insert example property amenities relationships
-INSERT INTO property_property_amenities (property_id, amenity_id, note) VALUES
+INSERT INTO property_amenities (property_id, amenity_id, note) VALUES
   -- Departamento Palermo (moderno, con amenities)
   ('550e8400-e29b-41d4-a716-446655440001', '6', 'Balcón con vista a la calle'),    -- Balcón
   ('550e8400-e29b-41d4-a716-446655440001', '13', 'Luminoso por orientación norte'), -- Luminoso

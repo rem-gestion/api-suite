@@ -159,6 +159,15 @@ BEGIN
     RAISE NOTICE '  - Company: %', (SELECT COUNT(*) FROM person_company);
     RAISE NOTICE 'Users insertados: %', (SELECT COUNT(*) FROM auth_users);
     RAISE NOTICE 'Contactos insertados: %', (SELECT COUNT(*) FROM person_contacto);
+    RAISE NOTICE '─────────────────────────────────────────────────────────────────';
+    RAISE NOTICE 'PROPERTY SERVICE:';
+    RAISE NOTICE 'Property Types: %', (SELECT COUNT(*) FROM property_type);
+    RAISE NOTICE 'Amenities: %', (SELECT COUNT(*) FROM property_amenity);
+    RAISE NOTICE 'Properties: %', (SELECT COUNT(*) FROM property_property);
+    RAISE NOTICE 'Property Amenities: %', (SELECT COUNT(*) FROM property_property_amenities);
+    RAISE NOTICE 'Property Listings: %', (SELECT COUNT(*) FROM property_listings);
+    RAISE NOTICE 'Property Media: %', (SELECT COUNT(*) FROM property_media);
+    RAISE NOTICE 'Property Valuations: %', (SELECT COUNT(*) FROM property_valuations);
     RAISE NOTICE '═══════════════════════════════════════════════════════════════════';
     RAISE NOTICE 'USUARIOS DE PRUEBA DISPONIBLES:';
     RAISE NOTICE '• juan.perez@example.com (password: password)';
@@ -169,6 +178,13 @@ BEGIN
     RAISE NOTICE '• admin@acmecorp.com (password: password) - EMPRESA';
     RAISE NOTICE '• contacto@techsolutions.com (password: password) - EMPRESA';
     RAISE NOTICE '• ventas@innovatech.com.ar (password: password) - EMPRESA';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════════';
+    RAISE NOTICE 'PROPIEDADES DE EJEMPLO:';
+    RAISE NOTICE '• Casa en Palermo (Juan Pérez) - Venta: $450,000 USD | Alquiler: $2,800 USD';
+    RAISE NOTICE '• Departamento Recoleta (María González) - Venta: $280,000 USD';
+    RAISE NOTICE '• Oficina Microcentro (ACME Corp) - Alquiler comercial: $3,500 USD';
+    RAISE NOTICE '• Quinta zona norte (Carlos Rodríguez) - Alquiler temporal: $1,200 USD';
+    RAISE NOTICE '• Depto Nueva Córdoba (Ana Martínez) - Alquiler: $85,000 ARS';
     RAISE NOTICE '═══════════════════════════════════════════════════════════════════';
 END
 $$;

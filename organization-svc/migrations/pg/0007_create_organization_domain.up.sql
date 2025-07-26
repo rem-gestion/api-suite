@@ -556,8 +556,8 @@ BEGIN
   test_org := gen_random_uuid();
 
   -- 2) Inserto esa organización en la tabla con campos obligatorios
-  INSERT INTO organization (id, display_name, created_by)
-  VALUES (test_org, 'Test Organization - Smoke Test', gen_random_uuid());
+  INSERT INTO organization (id, name, display_name, created_by)
+  VALUES (test_org, 'test-org-smoke', 'Test Organization - Smoke Test', gen_random_uuid());
 
   -- 3) Limpieza de corridas previas
   DELETE FROM organization_domain
