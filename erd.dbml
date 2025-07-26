@@ -1,105 +1,331 @@
-Project "REM Gestión – Core Auth & Billing" {
+Project "REM Gestión – Real Estate Management Platform" {
   database_type: "PostgreSQL"
+  note: '''
+  Plataforma integral de gestión inmobiliaria que incluye:
+  
+  🏠 PROPIEDADES: Gestión completa de inmuebles con características, multimedia y amenities
+  👥 CRM: Sistema de gestión de clientes, leads e interacciones comerciales  
+  📋 OPERACIONES: Publicaciones, listings y operaciones de venta/alquiler
+  📄 CONTRATOS: Gestión de contratos, pagos y seguimiento de vencimientos
+  💰 FINANZAS: Transacciones, comisiones y control financiero
+  📊 CONTABILIDAD: Reportes, analytics y seguimiento contable
+  💬 COMUNICACIONES: Notificaciones, emails y gestión de comunicaciones
+  📈 REPORTES: Dashboards, métricas y análisis de negocio
+  📊 ANALYTICS: Análisis de mercado, tasaciones y tendencias
+  🔗 INTEGRACIONES: APIs y conexiones con servicios externos
+  💳 SUSCRIPCIÓN: Planes, facturación y gestión de membresías
+  ⚙️  CONFIGURACIÓN: Settings, usuarios, roles y administración del sistema
+  '''
 }
 
-/* ─────────────────────────  CATÁLOGOS  ────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   💳 SUSCRIPCIÓN - BILLING & SUBSCRIPTION MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Gestión de planes, suscripciones y facturación
+   🎯 CASOS DE USO:
+   • Definir planes de precios (Free, Pro, Enterprise)
+   • Gestionar suscripciones de usuarios individuales
+   • Controlar suscripciones empresariales/organizacionales
+   • Establecer límites por plan (propiedades, usuarios, storage)
+   • Facturación automática y renovaciones
+   
+   📊 MÉTRICAS IMPORTANTES:
+   • Revenue mensual/anual por plan
+   • Churn rate por tipo de suscripción
+   • Upgrade/downgrade patterns
+   • Límites de uso vs consumo real
+   ═══════════════════════════════════════════════════════════════════════════════════ */
 Table plan {
+  Note: '''
+  📋 PLANES DE SUSCRIPCIÓN
+  
+  Define los diferentes niveles de servicio disponibles:
+  • FREE: Plan gratuito con limitaciones básicas
+  • STARTER: Para inmobiliarias pequeñas (5-20 propiedades)
+  • PROFESSIONAL: Para inmobiliarias medianas (50-200 propiedades)  
+  • ENTERPRISE: Para grandes inmobiliarias (ilimitado)
+  
+  💰 PRECIOS EJEMPLO:
+  • Free: $0 - 3 propiedades, 1 usuario
+  • Starter: $29.99 - 20 propiedades, 3 usuarios, 5GB
+  • Pro: $99.99 - 200 propiedades, 10 usuarios, 50GB
+  • Enterprise: Contactar - Ilimitado
+  '''
+  
   id        serial       [pk]                       // PK autoincremental
-  code      varchar(32)  [unique]                   // pro, team…
-  name      varchar(64)
-  price     numeric(10,2)                           // ARS (0 => “Contactar”)
-  currency  char(3)
-  features  jsonb                                   // para la UI
+  code      varchar(32)  [unique, not null]         // free, starter, pro, enterprise
+  name      varchar(64)  [not null]                 // "Plan Profesional", "Plan Enterprise"
+  price     numeric(10,2) [not null, note: "ARS (0 => 'Contactar')"]
+  currency  char(3)      [not null, default: 'ARS']
+  features  jsonb        [not null, default: '{}', note: "Lista de características del plan para mostrar en UI"]
+  max_properties int     [not null, default: 0, note: "0 = unlimited"]
+  max_contracts int      [not null, default: 0, note: "0 = unlimited"] 
+  max_users int          [not null, default: 1, note: "Cantidad máxima de usuarios"]
+  max_storage_gb int     [not null, default: 1, note: "Límite de almacenamiento"]
+  is_active boolean      [not null, default: true, note: "Si el plan está disponible para contratación"]
 
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
-  created_by    uuid      //[ref: > users.id]
+  created_by    uuid      [ref: > users.id]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
-  deleted_at    timestamp   [note: "soft-delete timestamp"]
+  updated_by    uuid      [ref: > users.id, note: "quién lo modificó por última vez"]
+  deleted_at    timestamp [note: "soft-delete timestamp"]
+
+  indexes {
+    (code) [unique]
+    (is_active, price)
+  }
 }
 
-/* ─────────────────────────  ADDRESS  ──────────────────────────── */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   ⚙️ CONFIGURACIÓN - CORE SYSTEM ENTITIES  
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Entidades base del sistema (direcciones, personas, organizaciones)
+   🎯 CASOS DE USO:
+   • Gestión de direcciones con geocodificación (Google Places)
+   • Manejo de personas físicas y jurídicas (clientes, propietarios)
+   • Administración de organizaciones/inmobiliarias
+   • Sistema de usuarios, roles y permisos
+   • Configuración multi-tenant del sistema
+   
+   🔧 CARACTERÍSTICAS TÉCNICAS:
+   • Soporte para Google Places API
+   • Herencia person -> individual/company
+   • Multi-tenancy por organización
+   • Soft deletes y auditoría completa
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+// ─────────────────────────  DIRECCIONES Y UBICACIONES  ─────────────────────────
 Table address {
+  Note: '''
+  📍 DIRECCIONES Y GEOLOCALIZACIÓN
+  
+  Maneja todas las direcciones del sistema con soporte completo para geocodificación:
+  
+  🏠 EJEMPLOS DE USO:
+  • Dirección de propiedades: "Av. Corrientes 1234, Piso 5, Depto A"
+  • Direcciones fiscales de organizaciones
+  • Direcciones de sucursales inmobiliarias
+  
+  🌎 INTEGRACIÓN GOOGLE PLACES:
+  • google_place_id: Para validación y autocompletado
+  • latitude/longitude: Para mapas y búsquedas por proximidad
+  • Normalización automática de direcciones
+  
+  🔍 BÚSQUEDAS HABITUALES:
+  • Propiedades cerca de una ubicación
+  • Agrupación por barrio/zona
+  • Cálculo de distancias
+  '''
+  
   id        uuid          [pk, default: `uuid_generate_v4()`]
-  floor     varchar(16)
-  unit      varchar(16)
-  street    varchar(120)
-  number    int
-  city      varchar(64)
-  state     varchar(64)
-  zip       varchar(16)
-  country   varchar(2)     [note: "ISO-3166-1 alpha-2"]
+  floor     varchar(16)   [note: "Piso (ej: '5', 'PB', 'Sótano')"]
+  unit      varchar(16)   [note: "Unidad/Depto (ej: 'A', '501', 'Of. 12')"]
+  street    varchar(120)  [not null, note: "Calle principal (ej: 'Av. Corrientes')"]
+  number    int           [note: "Número de calle"]
+  city      varchar(64)   [not null, note: "Ciudad (ej: 'CABA', 'Rosario')"]
+  state     varchar(64)   [not null, note: "Provincia (ej: 'Buenos Aires', 'Santa Fe')"]
+  zip       varchar(16)   [note: "Código postal (ej: 'C1043AAZ')"]
+  country   char(2)       [not null, default: 'AR', note: "ISO-3166-1 alpha-2 (AR, BR, UY)"]
+  google_place_id varchar(255) [note: "Google Places API place ID para geocoding exacto"]
+  latitude  decimal(10,8) [note: "Coordenada latitud para mapas (-34.6037389)"]
+  longitude decimal(11,8) [note: "Coordenada longitud para mapas (-58.3815704)"]
 
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
-  deleted_at    timestamp   [note: "soft-delete timestamp"]
+  updated_by    uuid      [ref: > users.id, note: "quién lo modificó por última vez"]
+  deleted_at    timestamp [note: "soft-delete timestamp"]
+
+  indexes {
+    (country, state, city) [note: "Búsquedas por ubicación geográfica"]
+    (street, number, city) [note: "Búsqueda exacta de dirección"]
+    (google_place_id) [note: "Integración con Google Places"]
+    (latitude, longitude) [note: "Búsquedas por proximidad geográfica"]
+  }
 }
 
-/* ─────────────────────────  PERSON CORE  ─────────────────────── */
-Enum sexo {
-  masculino
-  femenino
+// ─────────────────────────  PERSONAS Y ENTIDADES JURÍDICAS  ─────────────────────────
+
+/* ─────────────────────────  PERSON CORE (HERENCIA)  ─────────────────────── */
+Enum gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+Enum person_type {
+  individual
+  company
 }
 
 Table person {
+  Note: '''
+  👤 ENTIDAD BASE PARA PERSONAS
+  
+  Tabla padre que maneja tanto personas físicas como jurídicas usando herencia:
+  
+  🏠 CASOS DE USO EN INMOBILIARIAS:
+  • Propietarios de inmuebles (individual o empresa)
+  • Inquilinos/compradores (generalmente individuals)
+  • Garantes (pueden ser individual o company)
+  • Contactos comerciales y leads
+  
+  🔄 PATRÓN DE HERENCIA:
+  • person (campos comunes)
+    ├── individual (personas físicas: DNI, nombre, apellido)
+    └── company (personas jurídicas: CUIT, razón social)
+  
+  📊 ESTADÍSTICAS TÍPICAS:
+  • 80% individual, 20% company en cartera de clientes
+  • 60% individual, 40% company en propietarios
+  '''
+  
   id         uuid        [pk, default: `uuid_generate_v4()`]
-  type       varchar(10) [note: "individual | company"]
-  address_id uuid        [ref: > address.id]
-  avatar_url text
-  sexo        sexo        
+  type       person_type [not null, note: "individual | company - define el tipo de persona"]
+  address_id uuid        [ref: > address.id, note: "Dirección principal de contacto"]
+  avatar_url text        [note: "URL de foto de perfil o logo corporativo"]
+  is_active  boolean     [not null, default: true, note: "Estado activo/inactivo para filtros"]
+  notes      text        [note: "Notas generales sobre esta persona/empresa"]
 
   //auditoría
   created_at timestamp [default: `now()`, not null]
   updated_at timestamp
-  updated_by uuid      //[ref: > users.id]
+  updated_by uuid      [ref: > users.id]
   deleted_at timestamp
+
+  indexes {
+    (type, is_active) [note: "Filtros principales en listados"]
+    (address_id) [note: "Consultas por ubicación"]
+  }
 }
 
-/* ------- Sub-tipo: Individual (PERSONA FISICA)---------------------------------- */
+/* ------- Sub-tipo: Individual (PERSONA FÍSICA) ---------------------------------- */
 Table individual {
-  person_id  uuid [pk, ref: > person.id]
-  first_name varchar(64)
-  last_name  varchar(64)
-  dni        char(8) [unique]
+  Note: '''
+  👨‍👩‍👧‍👦 PERSONAS FÍSICAS
+  
+  Representa clientes, propietarios y contactos que son personas físicas:
+  
+  🎯 EJEMPLOS TÍPICOS:
+  • María González (Propietaria de depto en Palermo)
+  • Juan Pérez (Inquilino buscando casa en Zona Norte)  
+  • Carlos Martín (Garante de alquiler)
+  • Ana López (Lead interesada en inversión)
+  
+  📋 DATOS REQUERIDOS:
+  • DNI: Obligatorio para contratos legales
+  • Nombre completo: Para documentación
+  • Género: Para comunicaciones personalizadas
+  • Fecha nacimiento: Para verificación de mayoría de edad
+  
+  📊 MÉTRICAS ÚTILES:
+  • Edad promedio de compradores vs inquilinos
+  • Distribución por género en diferentes operaciones
+  '''
+  
+  person_id  uuid [pk, ref: > person.id, note: "FK a tabla padre person"]
+  first_name varchar(64) [not null, note: "Nombre (ej: 'María Elena')"]
+  last_name  varchar(64) [not null, note: "Apellido (ej: 'González Pérez')"]
+  dni        char(8)     [unique, not null, note: "DNI sin puntos (ej: '12345678')"]
+  gender     gender      [note: "Género para personalización de comunicaciones"]
+  date_of_birth date     [note: "Fecha nacimiento para validar mayoría de edad"]
 
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
-  deleted_at    timestamp   [note: "soft-delete timestamp"]
+  updated_by    uuid      [ref: > users.id, note: "quién lo modificó por última vez"]
+  deleted_at    timestamp [note: "soft-delete timestamp"]
+
+  indexes {
+    (dni) [unique, note: "Búsqueda rápida por documento"]
+    (last_name, first_name) [note: "Búsqueda alfabética por apellido"]
+    (date_of_birth) [note: "Filtros por rango de edad"]
+  }
 }
 
-/* ------- Sub-tipo: Company (PERSONA JURIDA)------------------------------------- */
+/* ------- Sub-tipo: Company (PERSONA JURÍDICA) ------------------------------------ */
 Table company {
-  person_id   uuid [pk, ref: > person.id]
-  legal_name  varchar(120)
-  cuit        char(11)    [unique]
-  society_type varchar(12) [note: "SA | SRL | SAS | …"]
-
+  Note: '''
+  🏢 PERSONAS JURÍDICAS / EMPRESAS
+  
+  Representa empresas, inmobiliarias, fondos de inversión, etc:
+  
+  🎯 EJEMPLOS TÍPICOS:
+  • "Inmobiliaria San Martín SRL" (Gestora de propiedades)
+  • "Fondo de Inversión ABC SA" (Propietario de edificios)
+  • "Constructora Norte SAS" (Desarrolladora)
+  • "Empresa XYZ SA" (Inquilino corporativo)
+  
+  📋 DATOS FISCALES:
+  • CUIT: Obligatorio para facturación
+  • Razón Social vs Nombre Comercial
+  • Tipo societario (SA, SRL, SAS, etc.)
+  
+  📊 CLASIFICACIÓN POR TAMAÑO:
+  • Micro: 1-10 empleados (pequeñas inmobiliarias)
+  • Small: 11-50 empleados (inmobiliarias regionales)  
+  • Medium: 51-250 empleados (redes inmobiliarias)
+  • Large: 251+ empleados (grandes desarrolladoras)
+  '''
+  
+  id           uuid [pk, default: `uuid_generate_v4()`, note: "ID único de empresa independiente"]
+  person_id    uuid [unique, not null, ref: > person.id, note: "FK a tabla padre person (1-a-1)"]
+  legal_name   varchar(120) [not null, note: "Razón social oficial (ej: 'Inmobiliaria San Martín SRL')"]
+  trade_name   varchar(120) [note: "Nombre comercial/marca (ej: 'InmoSM', 'San Martín Propiedades')"]
+  cuit         char(11)     [unique, not null, note: "CUIT sin guiones (ej: '20123456789')"]
+  society_type varchar(12)  [not null, note: "Tipo societario: SA, SRL, SAS, SCS, etc."]
+  company_size company_size [note: "Clasificación por cantidad de empleados"]
+  industry     varchar(100) [note: "Sector: 'Real Estate', 'Construction', 'Investment'"]
+  website      varchar(255) [note: "Sitio web corporativo"]
+  
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
-  deleted_at    timestamp   [note: "soft-delete timestamp"]
+  updated_by    uuid      [ref: > users.id, note: "quién lo modificó por última vez"]
+  deleted_at    timestamp [note: "soft-delete timestamp"]
+
+  indexes {
+    (cuit) [unique, note: "Búsqueda por identificación fiscal"]
+    (person_id) [unique, note: "Relación 1-a-1 con person"]
+    (society_type) [note: "Filtros por tipo societario"]
+    (company_size) [note: "Segmentación por tamaño"]
+    (industry) [note: "Filtros por sector de actividad"]
+  }
 }
 
-/* ─────────────────────────  ORGANIZATION  ────────────────────── */
-Table organization {
-  id                uuid   [pk, default: `generate_uuid()`]
-  display_name      varchar(120)
-  logo_url          text
-  fiscal_address_id uuid   [ref: > address.id]
-  matricula         varchar(32)
-  status            organization_status_enum [default: 'active']   // enum: active | suspended | pending_activation | deleted
+// ─────────────────────────  ENUMS PARA PERSONAS  ─────────────────────────
 
-  created_at  timestamp [default: `now()`, not null]
-  created_by  uuid      //[ref: > users.id]
-  updated_at  timestamp
-  updated_by  uuid      //[ref: > users.id]
-  deleted_at  timestamp
+Enum gender {
+  male
+  female  
+  other
+  prefer_not_to_say
+}
+
+Enum person_type {
+  individual      // Persona física
+  company        // Persona jurídica
+}
+
+Enum company_size {
+  micro       // 1-10 empleados (pequeñas inmobiliarias familiares)
+  small       // 11-50 empleados (inmobiliarias locales/regionales)  
+  medium      // 51-250 empleados (cadenas inmobiliarias)
+  large       // 251+ empleados (grandes desarrolladoras/fondos)
+}
+
+// ─────────────────────────  ORGANIZACIONES / INMOBILIARIAS  ─────────────────────────
+Enum organization_status {
+  active
+  suspended
+  pending_activation
+  deleted
 }
 
 Enum owner_type {
@@ -107,21 +333,203 @@ Enum owner_type {
   company
 }
 
-Table organization_owner {
-  id                     uuid [pk, default: `generate_uuid()`]
-  owner_type             owner_type_enum  [not null]          // individual | company
-  owner_id               uuid  [not null]
-  organization_id        uuid  [ref: > organization.id, not null]
-  ownership_percentage   decimal(5,2) [not null]              // 0-100
+Enum employee_status {
+  active
+  inactive
+  suspended
+  terminated
+}
+
+Enum invitation_status {
+  pending
+  sent
+  accepted
+  rejected
+  cancelled
+  expired
+}
+
+Enum integration_status {
+  inactive
+  active
+  error
+  disabled
+}
+
+Enum sync_status {
+  success
+  failed
+  in_progress
+  pending
+}
+
+Enum sync_frequency {
+  real_time
+  hourly
+  daily
+  weekly
+  monthly
+  manual
+}
+
+Enum domain_type {
+  custom
+  subdomain
+  system
+}
+
+Enum domain_status {
+  pending
+  active
+  expired
+  error
+}
+
+Enum dns_verification_method {
+  txt
+  cname
+  mx
+}
+
+Enum integration_category {
+  accounting
+  crm
+  marketing
+  payments
+  analytics
+  communication
+  storage
+}
+
+Enum integration_event_type {
+  sync
+  webhook
+  api_call
+  error
+  status_change
+}
+
+Enum integration_event_status {
+  pending
+  processing
+  success
+  failed
+  cancelled
+}
+
+Enum log_level {
+  debug
+  info
+  warning
+  error
+  critical
+}
+
+Enum invitation_log_action {
+  created
+  sent
+  resent
+  accepted
+  rejected
+  cancelled
+  expired
+}
+
+Enum dns_record_type {
+  A
+  AAAA
+  CNAME
+  MX
+  TXT
+  NS
+  SOA
+}
+
+Enum domain_verification_type {
+  dns
+  ssl
+  file
+  meta_tag
+}
+
+Enum verification_status {
+  success
+  failed
+  pending
+  expired
+}
+
+Table organization {
+  Note: '''
+  🏢 ORGANIZACIONES / INMOBILIARIAS
+  
+  Representa las empresas inmobiliarias que usan la plataforma (multi-tenant):
+  
+  🎯 EJEMPLOS TÍPICOS:
+  • "Inmobiliaria Central" (inmobiliaria tradicional)
+  • "PropTech Solutions" (startup proptech)
+  • "Red Inmobiliaria Nacional" (franquicia)
+  • "Desarrollos Premium SA" (desarrolladora boutique)
+  
+  🏗️ ARQUITECTURA MULTI-TENANT:
+  • Cada organización es un "tenant" independiente
+  • Datos aislados entre organizaciones
+  • Configuraciones y personalizaciones por organización
+  • Branding personalizado (logo, colores)
+  
+  📊 CASOS DE USO:
+  • Gestión de múltiples sucursales
+  • Control de usuarios y permisos por organización
+  • Configuraciones específicas del negocio
+  • Matrícula profesional para cumplimiento legal
+  '''
+  
+  id                uuid   [pk, default: `uuid_generate_v4()`]
+  display_name      varchar(120) [not null, note: "Nombre comercial mostrado en UI"]
+  logo_url          text   [note: "URL del logo para branding personalizado"]
+  fiscal_address_id uuid   [ref: > address.id, note: "Dirección fiscal/legal de la empresa"]
+  matricula         varchar(32) [note: "Matrícula profesional o número de registro CUCICBA"]
+  status            organization_status [not null, default: 'active']
 
   created_at  timestamp [default: `now()`, not null]
-  created_by  uuid      //[ref: > users.id]
+  created_by  uuid      [ref: > users.id]
   updated_at  timestamp
-  updated_by  uuid      //[ref: > users.id]
+  updated_by  uuid      [ref: > users.id]
   deleted_at  timestamp
 
+  indexes {
+    (status) [note: "Filtros por estado de organización"]
+    (matricula) [note: "Búsqueda por matrícula profesional"]
+    (display_name) [note: "Búsqueda por nombre comercial"]
+  }
+}
+
+Table organization_owner {
+  id                     uuid [pk, default: `uuid_generate_v4()`]
+  organization_id        uuid  [ref: > organization.id, not null]
+  owner_party_type       owner_type  [not null]
+  owner_individual_id    uuid  [ref: > individual.person_id, note: "FK to individual when owner_party_type='individual'"]
+  owner_company_id       uuid  [ref: > company.id, note: "FK to company when owner_party_type='company'"]
+  ownership_percentage   decimal(5,2) [not null, note: "0-100"]
+
+  created_at  timestamp [default: `now()`, not null]
+  created_by  uuid      [ref: > users.id]
+  updated_at  timestamp
+  updated_by  uuid      [ref: > users.id]
+  deleted_at  timestamp
+
+  Note: '''
+  CHECK constraints en PostgreSQL:
+  - (owner_party_type='individual' AND owner_individual_id IS NOT NULL AND owner_company_id IS NULL)
+  - OR (owner_party_type='company' AND owner_company_id IS NOT NULL AND owner_individual_id IS NULL)
+  - ownership_percentage >= 0 AND ownership_percentage <= 100
+  '''
+
   Indexes {
-    (organization_id, owner_type, owner_id) [unique]
+    (organization_id, owner_party_type, owner_individual_id, owner_company_id) [unique, note: "previene duplicados por tipo"]
+    (owner_individual_id) [note: "índice para consultas por individual"]
+    (owner_company_id) [note: "índice para consultas por company"]
+    (organization_id, ownership_percentage) [note: "para consultas de participación"]
   }
 }
 
@@ -131,7 +539,7 @@ Table organization_settings {
   setting_value   jsonb
   created_at      timestamp   [default: `now()`, not null]
   updated_at      timestamp   [default: `now()`, not null]
-  updated_by      uuid        //[ref: > users.id]
+  updated_by      uuid        [ref: > users.id]
 }
 
 Table organization_branch {
@@ -145,9 +553,9 @@ Table organization_branch {
 
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
-  created_by    uuid      //[ref: > users.id]
+  created_by    uuid      [ref: > users.id]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id]
+  updated_by    uuid      [ref: > users.id]
   deleted_at    timestamp
 
   Indexes {
@@ -156,19 +564,19 @@ Table organization_branch {
 }
 
 Table employees {
-  id                 uuid  [pk, default: `generate_uuid()`]
+  id                 uuid  [pk, default: `uuid_generate_v4()`]
   user_id            uuid  [ref: > users.id, not null]
   person_id          uuid  [ref: > person.id]
   organization_id    uuid  [ref: > organization.id, not null]
   primary_role_id    uuid  [ref: > organization_role.id]
-  status             employee_status_enum [default: 'active']    // active | inactive | suspended | terminated
+  status             employee_status [default: 'active']    // active | inactive | suspended | terminated
   hired_at           date
   fired_at           date
 
   created_at  timestamp [default: `now()`, not null]
-  created_by  uuid      //[ref: > users.id]
+  created_by  uuid      [ref: > users.id]
   updated_at  timestamp
-  updated_by  uuid      //[ref: > users.id]
+  updated_by  uuid      [ref: > users.id]
   deleted_at  timestamp
 
   Indexes {
@@ -178,7 +586,7 @@ Table employees {
 }
 
 Table organization_role {
-  id              uuid [pk, default: `generate_uuid()`]
+  id              uuid [pk, default: `uuid_generate_v4()`]
   organization_id uuid [ref: > organization.id, not null]
   name            varchar(64)
   description     text
@@ -212,7 +620,7 @@ Table employee_roles {
 }
 
 Table organization_invite {
-  id                uuid [pk, default: `generate_uuid()`]
+  id                uuid [pk, default: `uuid_generate_v4()`]
   organization_id   uuid [ref: > organization.id, not null]
   inviter_person_id uuid [ref: > person.id, not null]
   invitee_email     varchar(255) [not null]
@@ -220,7 +628,7 @@ Table organization_invite {
   role_id           uuid [ref: > organization_role.id]
   branch_id         uuid [ref: > organization_branch.id]
   token             varchar(128) [unique, not null]
-  status            invitation_status_enum [default: 'pending']
+  status            invitation_status [default: 'pending']
   expires_at        timestamp [not null]
   accepted_at       timestamp
   rejected_at       timestamp
@@ -228,23 +636,23 @@ Table organization_invite {
   metadata          jsonb [default: '{}']
 
   created_at        timestamp [default: `now()`, not null]
-  created_by        uuid      //[ref: > users.id]
+  created_by        uuid      [ref: > users.id]
   updated_at        timestamp [default: `now()`, not null]
-  updated_by        uuid      //[ref: > users.id]
+  updated_by        uuid      [ref: > users.id]
 }
 
 Table organization_integration {
-  id                  uuid [pk, default: `generate_uuid()`]
+  id                  uuid [pk, default: `uuid_generate_v4()`]
   organization_id     uuid [ref: > organization.id, not null]
   integration_type_id uuid [ref: > integration_type.id, not null]
   name                varchar(200)
   description         text
-  status              integration_status_enum [default: 'inactive']
+  status              integration_status [default: 'inactive']
   configuration       jsonb [default: '{}', not null]
   credentials         jsonb [default: '{}']
   last_sync_at        timestamp
-  last_sync_status    sync_status_enum
-  sync_frequency      sync_frequency_enum
+  last_sync_status    sync_status
+  sync_frequency      sync_frequency
   auto_sync_enabled   boolean [default: false]
   webhook_url         varchar(500)
   webhook_secret      varchar(100)
@@ -268,12 +676,12 @@ Table organization_integration {
 }
 
 Table organization_domain {
-  id                      uuid [pk, default: `generate_uuid()`]
+  id                      uuid [pk, default: `uuid_generate_v4()`]
   organization_id         uuid [ref: > organization.id, not null]
   domain_name             varchar(255) [not null]
   subdomain               varchar(100)
-  domain_type             domain_type_enum [default: 'custom']
-  status                  domain_status_enum [default: 'pending']
+  domain_type             domain_type [default: 'custom']
+  status                  domain_status [default: 'pending']
   is_primary              boolean [default: false]
   ssl_enabled             boolean [default: false]
   ssl_certificate         text
@@ -281,7 +689,7 @@ Table organization_domain {
   ssl_expires_at          timestamp
   dns_verified            boolean [default: false]
   dns_verification_token  varchar(100)
-  dns_verification_method dns_verification_method_enum [default: 'txt']
+  dns_verification_method dns_verification_method [default: 'txt']
   verification_attempts   int [default: 0]
   last_verification_at    timestamp
   redirect_to_primary     boolean [default: false]
@@ -302,12 +710,41 @@ Table organization_domain {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   🔗 INTEGRACIONES - EXTERNAL INTEGRATIONS
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Conectividad con servicios externos y APIs
+   🎯 CASOS DE USO:
+   • Integración con portales inmobiliarios (Zonaprop, Argenprop, MercadoLibre)
+   • Conexión con sistemas contables (Tango, Bejerman, SAP)
+   • CRMs externos (HubSpot, Salesforce)
+   • Medios de pago (MercadoPago, PayPal, transferencias)
+   • Servicios de comunicación (WhatsApp Business, Mailchimp)
+   
+   🔌 TIPOS DE INTEGRACIÓN:
+   • accounting: Sistemas contables y ERP
+   • crm: Plataformas de CRM externas
+   • marketing: Herramientas de marketing y email
+   • payments: Gateways de pago y facturación
+   • analytics: Google Analytics, Facebook Pixel
+   • communication: WhatsApp, email, SMS providers
+   • storage: Clouds de almacenamiento (AWS S3, Google Drive)
+   
+   ⚙️ CARACTERÍSTICAS TÉCNICAS:
+   • OAuth 2.0 para autenticación segura
+   • Webhooks para eventos en tiempo real
+   • API rate limiting y throttling
+   • Sincronización automática programada
+   • Logs detallados para debugging
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
 Table integration_type {
-  id                  uuid        [pk, default: `generate_uuid()`]
+  id                  uuid        [pk, default: `uuid_generate_v4()`]
   name                varchar(100) [unique, not null]          // snake_case
   display_name        varchar(200) [not null]
   description         text
-  category            integration_category_enum [not null]     // accounting | crm | …
+  category            integration_category [not null]     // accounting | crm | …
   provider            varchar(100) [not null]                  // Intuit, HubSpot …
   version             varchar(20)  [default: '1.0']
   is_active           boolean      [default: true]
@@ -318,7 +755,7 @@ Table integration_type {
 
   created_at          timestamp    [default: `now()`, not null]
   updated_at          timestamp    [default: `now()`, not null]
-  updated_by          uuid         //[ref: > users.id]
+  updated_by          uuid         [ref: > users.id]
 
   Indexes {
     (category, is_active)
@@ -326,11 +763,11 @@ Table integration_type {
 }
 
 Table organization_integration_event {
-  id            uuid  [pk, default: `generate_uuid()`]
+  id            uuid  [pk, default: `uuid_generate_v4()`]
   integration_id uuid  [ref: > organization_integration.id, not null]
-  event_type    integration_event_type_enum [not null]        // sync | webhook | …
+  event_type    integration_event_type [not null]        // sync | webhook | …
   event_data    jsonb  [default: '{}', not null]
-  status        integration_event_status_enum [default: 'pending']
+  status        integration_event_status [default: 'pending']
   error_message text
   retry_count   int   [default: 0]
   max_retries   int   [default: 3]
@@ -346,10 +783,10 @@ Table organization_integration_event {
 }
 
 Table organization_integration_log {
-  id            uuid  [pk, default: `generate_uuid()`]
+  id            uuid  [pk, default: `uuid_generate_v4()`]
   integration_id uuid  [ref: > organization_integration.id, not null]
   event_id      uuid  [ref: > organization_integration_event.id]
-  level         log_level_enum [default: 'info']
+  level         log_level [default: 'info']
   message       text  [not null]
   context       jsonb [default: '{}']
 
@@ -362,12 +799,12 @@ Table organization_integration_log {
 }
 
 Table organization_invite_log {
-  id              uuid [pk, default: `generate_uuid()`]
+  id              uuid [pk, default: `uuid_generate_v4()`]
   invite_id       uuid [ref: > organization_invite.id, not null]
-  action          invitation_log_action_enum [not null]       // created | sent | …
-  old_status      invitation_status_enum
-  new_status      invitation_status_enum
-  actor_person_id uuid  //[ref: > person.id]
+  action          invitation_log_action [not null]       // created | sent | …
+  old_status      invitation_status
+  new_status      invitation_status
+  actor_person_id uuid  [ref: > person.id]
   actor_type      varchar(20) [note: "user | system | cron"]
   client_ip       inet
   user_agent      text
@@ -382,9 +819,9 @@ Table organization_invite_log {
 }
 
 Table organization_domain_dns {
-  id                  uuid [pk, default: `generate_uuid()`]
+  id                  uuid [pk, default: `uuid_generate_v4()`]
   domain_id           uuid [ref: > organization_domain.id, not null]
-  record_type         dns_record_type_enum [not null]          // A | CNAME | TXT …
+  record_type         dns_record_type [not null]          // A | CNAME | TXT …
   record_name         varchar(255) [not null]
   record_value        text   [not null]
   record_ttl          int    [default: 300]
@@ -404,11 +841,11 @@ Table organization_domain_dns {
 }
 
 Table organization_domain_verification_log {
-  id                uuid [pk, default: `generate_uuid()`]
+  id                uuid [pk, default: `uuid_generate_v4()`]
   domain_id         uuid [ref: > organization_domain.id, not null]
   dns_record_id     uuid [ref: > organization_domain_dns.id]
-  verification_type domain_verification_type_enum [not null]   // dns | ssl | …
-  status            verification_status_enum      [not null]   // success | failed …
+  verification_type domain_verification_type [not null]   // dns | ssl | …
+  status            verification_status      [not null]   // success | failed …
   details           jsonb  [default: '{}']
   error_message     text
   response_data     jsonb
@@ -433,7 +870,7 @@ Table account {
   //auditoría
   created_at    timestamp [default: `now()`, not null]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  updated_by    uuid      [ref: > users.id,  note: "quién lo modificó por última vez"]
   deleted_at    timestamp   [note: "soft-delete timestamp"]
 }
 
@@ -448,50 +885,69 @@ Table users {
   //auditoría
   created_at timestamp [default: `now()`, not null]
   updated_at timestamp
-  updated_by uuid      //[ref: > users.id]
+  updated_by uuid      [ref: > users.id]
   deleted_at timestamp
 }
 
 
-/* ----------------------- CONTACTO ----------------------- */
-Table contacto {
+/* ----------------------- CONTACT ----------------------- */
+Enum contact_type {
+  email
+  phone
+  whatsapp
+  mobile
+  landline
+  fax
+}
+
+Table contact {
   id          uuid         [pk, default: `uuid_generate_v4()`]
-  persona_id  uuid         [ref: > person.id, not null]
-  tipo        varchar(16)  [note: "email | phone | whatsapp"]
-  dato        varchar(128)
-  is_primary  boolean      [default: false]
+  person_id   uuid         [ref: > person.id, not null]
+  type        contact_type [not null]
+  value       varchar(128) [not null]
+  is_primary  boolean      [not null, default: false]
 
   //auditoría
   created_at    timestamp [default: `now()`, not null]
-  created_by    uuid      //[ref: > users.id]
+  created_by    uuid      [ref: > users.id]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
-  deleted_at    timestamp   [note: "soft-delete timestamp"]
+  updated_by    uuid      [ref: > users.id, note: "quién lo modificó por última vez"]
+  deleted_at    timestamp [note: "soft-delete timestamp"]
 
   Indexes {
-    (persona_id)                           // idx_persona
-    (persona_id, tipo)                     // idx_persona_tipo
+    (person_id, type)
+    (person_id, is_primary) [unique, note: "solo un contacto primario por tipo por persona"]
+    (type, value)
   }
 }
 
 
 /* ───────────────────────── SUSCRIPCIÓN DE USUARIO ───────────────────────── */
+Enum subscription_status {
+  active
+  trial
+  cancelled
+  suspended
+  expired
+}
+
 Table user_subscription {
   id               uuid      [pk, default: `uuid_generate_v4()`]
   plan_id          int       [ref: > plan.id, not null]
   user_id          uuid      [ref: > users.id, not null]
-  status           varchar(12) [not null, note: "active | trial | canceled"]
+  status           subscription_status [not null, default: 'trial']
   starts_at        date      [not null]
   renews_at        date      [not null]
 
   // auditoría
   created_at       timestamp [default: `now()`, not null]
   updated_at       timestamp
-  updated_by       uuid      //[ref: > users.id]
+  updated_by       uuid      [ref: > users.id]
   deleted_at       timestamp [note: "soft-delete timestamp"]
 
   Indexes {
     (user_id) [unique, name: "user_subscription_unique", note: "una sola sub por usuario"]
+    (plan_id, status)
   }
 }
 
@@ -500,17 +956,22 @@ Table organization_subscription {
   id                uuid      [pk, default: `uuid_generate_v4()`]
   plan_id           int       [ref: > plan.id, not null]
   organization_id   uuid      [ref: > organization.id, not null]
-  status            varchar(12) [not null, note: "active | trial | canceled"]
+  status            subscription_status [not null, default: 'trial']
   starts_at         date      [not null]
   renews_at         date      [not null]
-  current_usage     jsonb
-  limit_snapshot    jsonb
+  current_usage     jsonb     [not null, default: '{}']
+  limit_snapshot    jsonb     [not null, default: '{}']
 
   //  -- auditoría
   created_at        timestamp [default: `now()`, not null]
   updated_at        timestamp
-  updated_by        uuid      //[ref: > users.id]
+  updated_by        uuid      [ref: > users.id]
   deleted_at        timestamp
+
+  indexes {
+    (organization_id) [unique]
+    (plan_id, status)
+  }
 }
 
 /* ─────────────────────────  TyC HISTÓRICO  ───────────────────── */
@@ -528,21 +989,667 @@ Table terms_acceptance {
   //  -- auditoría
   created_at    timestamp [default: `now()`, not null]
   updated_at    timestamp
-  updated_by    uuid      //[ref: > users.id,  note: "quién lo modificó por última vez"]
+  updated_by    uuid      [ref: > users.id,  note: "quién lo modificó por última vez"]
   deleted_at    timestamp   [note: "soft-delete timestamp"]
 }
 
 
 
-/* ---------- MEJORAS 2.0 ------------- */
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   📋 OPERACIONES - LISTINGS & MARKETING  
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Gestión de operaciones comerciales y publicaciones
+   🎯 CASOS DE USO:
+   • Publicación de propiedades en venta/alquiler/temporario
+   • Gestión de precios y condiciones comerciales
+   • Control de visibilidad (web propia, portales externos)
+   • Seguimiento de métricas (visualizaciones, consultas)
+   • Automatización de publicaciones y renovaciones
+   
+   💰 TIPOS DE OPERACIÓN:
+   • SALE: Venta tradicional
+   • RENTAL: Alquiler residencial/comercial  
+   • TEMPORARY: Alquiler temporario/turístico
+   • COMMERCIAL: Alquiler de oficinas/locales
+   • INVESTMENT: Oportunidades de inversión
+   
+   📊 MÉTRICAS OPERACIONALES:
+   • CTR (click-through rate) por tipo de operación
+   • Tiempo promedio en mercado por operación
+   • Conversión de listing → contrato
+   • Performance por canal de publicación
+   
+   🔄 ESTADOS DEL LISTING:
+   draft → active → [paused] → reserved → in_process → completed
+   '''
+   ═══════════════════════════════════════════════════════════════════════════════════ */
 
-// Clasificación de los tipos de inmuebles.
+// Enum para estados de publicación
+Enum listing_status {
+  draft         // borrador
+  active        // publicado y activo
+  paused        // pausado temporalmente
+  reserved      // reservado
+  in_process    // en proceso de operación
+  completed     // operación completada
+  expired       // publicación vencida
+  cancelled     // cancelado
+}
+
+// Enum para tipos de operación inmobiliaria
+Enum operation_type {
+  sale          // venta
+  rental        // alquiler tradicional
+  temporary     // alquiler temporario/turístico
+  commercial    // alquiler comercial
+  investment    // oportunidad de inversión
+}
+
+// Tipos de contrato
+Enum contract_type {
+  sale_purchase           // compraventa
+  rental_residential      // alquiler residencial
+  rental_commercial       // alquiler comercial
+  rental_temporary        // alquiler temporario
+  property_management     // administración de propiedades
+  real_estate_services    // servicios inmobiliarios
+}
+
+// Estados de contrato
+Enum contract_status {
+  draft          // borrador
+  pending_review // pendiente de revisión
+  pending_signature // pendiente de firma
+  active         // activo/vigente
+  suspended      // suspendido
+  terminated     // terminado
+  expired        // vencido
+  cancelled      // cancelado
+}
+
+// Tabla para operaciones/publicaciones de propiedades
+Table property_listing {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  property_id uuid [ref: > property.id, not null]
+  operation_type operation_type [not null]
+  listing_status listing_status [default: 'draft']
+  
+  // Precios y condiciones
+  price decimal(15,2)
+  currency char(3) [default: 'ARS']
+  price_per_sqm decimal(10,2) [note: "precio por m²"]
+  includes_expenses boolean [default: false]
+  monthly_expenses decimal(10,2) [note: "expensas mensuales"]
+  deposit_amount decimal(10,2) [note: "depósito/seña requerida"]
+  
+  // Términos específicos por tipo de operación
+  rental_terms jsonb [note: "términos específicos para alquileres"]
+  sale_terms jsonb [note: "términos específicos para ventas"]
+  
+  // Marketing y publicación
+  title varchar(200) [not null]
+  description text
+  highlighted boolean [default: false]
+  publication_start date
+  publication_end date
+  auto_renew boolean [default: false]
+  
+  // Configuración de publicación
+  publish_on_web boolean [default: true]
+  publish_on_portals boolean [default: false]
+  portal_config jsonb [note: "configuración para portales externos"]
+  
+  // Métricas
+  views_count int [default: 0]
+  inquiries_count int [default: 0]
+  favorites_count int [default: 0]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
+  indexes {
+    (property_id, operation_type) [unique, note: "una operación activa por tipo por propiedad"]
+    (listing_status, operation_type)
+    (price, currency)
+    (publication_start, publication_end)
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   📄 CONTRATOS - CONTRACT MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Gestión integral de contratos inmobiliarios
+   🎯 CASOS DE USO:
+   • Creación de contratos de compraventa y alquiler
+   • Seguimiento de pagos y vencimientos
+   • Gestión de garantes y avales
+   • Renovaciones automáticas y manuales
+   • Alertas de vencimientos y pagos atrasados
+   
+   📋 TIPOS DE CONTRATO:
+   • sale_purchase: Escrituras de compraventa
+   • rental_residential: Alquileres de vivienda
+   • rental_commercial: Alquileres comerciales
+   • rental_temporary: Alquileres temporarios (AirBnB style)
+   • property_management: Administración de propiedades
+   
+   💰 GESTIÓN DE PAGOS:
+   • Calendario automático de vencimientos
+   • Tracking de pagos parciales y completos
+   • Cálculo automático de intereses por mora
+   • Integración con medios de pago
+   
+   📊 MÉTRICAS CONTRACTUALES:
+   • Tasa de morosidad por tipo de contrato
+   • Promedio de duración de contratos
+   • Renovaciones vs nuevos contratos
+   • Comisiones generadas por período
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+Table contract {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  contract_number varchar(50) [unique, not null]
+  contract_type contract_type [not null]
+  contract_status contract_status [default: 'draft']
+  
+  // Relacionado a propiedad y operación
+  property_id uuid [ref: > property.id, not null]
+  property_listing_id uuid [ref: > property_listing.id, note: "la publicación que originó el contrato"]
+  
+  // Partes del contrato
+  landlord_person_id uuid [ref: > person.id, not null, note: "propietario/vendedor"]
+  tenant_person_id uuid [ref: > person.id, not null, note: "inquilino/comprador"]
+  guarantor_person_id uuid [ref: > person.id, note: "garante (opcional)"]
+  real_estate_org_id uuid [ref: > organization.id, note: "inmobiliaria intermediaria"]
+  
+  // Fechas y períodos
+  signature_date date
+  start_date date [not null]
+  end_date date
+  automatic_renewal boolean [default: false]
+  renewal_period_months int [note: "meses de renovación automática"]
+  notice_period_days int [default: 30, note: "días de preaviso para rescisión"]
+  
+  // Términos económicos
+  total_amount decimal(15,2) [not null]
+  currency char(3) [default: 'ARS']
+  payment_frequency varchar(20) [note: "monthly, quarterly, annually"]
+  payment_day_of_month int [default: 1]
+  late_payment_fee_percentage decimal(5,2) [default: 0]
+  
+  // Términos específicos por tipo
+  deposit_amount decimal(10,2)
+  commission_percentage decimal(5,2)
+  includes_expenses boolean [default: false]
+  includes_utilities boolean [default: false]
+  includes_furniture boolean [default: false]
+  
+  // Cláusulas especiales
+  special_clauses text
+  contract_template_id uuid [note: "plantilla utilizada"]
+  
+  // Archivos y documentos
+  contract_file_url text [note: "URL del archivo PDF del contrato"]
+  signed_file_url text [note: "URL del contrato firmado"]
+  additional_documents jsonb [note: "documentos adicionales"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
+  indexes {
+    (contract_number) [unique]
+    (property_id, contract_status)
+    (tenant_person_id, contract_status)
+    (landlord_person_id, contract_status)
+    (start_date, end_date)
+  }
+}
+
+// Seguimiento de pagos de contratos
+Table contract_payment {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  contract_id uuid [ref: > contract.id, not null]
+  
+  // Información del pago
+  payment_number int [not null]
+  due_date date [not null]
+  paid_date date
+  amount decimal(10,2) [not null]
+  currency char(3) [default: 'ARS']
+  
+  // Estado y seguimiento
+  payment_status varchar(20) [default: 'pending', note: "pending, paid, overdue, partial"]
+  paid_amount decimal(10,2) [default: 0]
+  late_fee_amount decimal(10,2) [default: 0]
+  
+  // Información adicional
+  payment_method varchar(50) [note: "transfer, cash, check, etc."]
+  reference_number varchar(100)
+  notes text
+  receipt_file_url text
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+
+  indexes {
+    (contract_id, payment_number) [unique]
+    (due_date, payment_status)
+    (paid_date)
+  }
+}
+
+/* ─────────────────────────  PROPERTY VALUATIONS & MARKET ANALYSIS  ─────────────────────── */
+
+Table property_valuation {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  property_id uuid [ref: > property.id, not null]
+  
+  // Información de la tasación
+  valuation_date date [not null]
+  valuation_type varchar(50) [not null, note: "market, fiscal, insurance, mortgage"]
+  appraised_value decimal(15,2) [not null]
+  currency char(3) [default: 'ARS']
+  value_per_sqm decimal(10,2)
+  
+  // Detalles del perito/valuador
+  appraiser_name varchar(100)
+  appraiser_license varchar(50)
+  appraiser_organization varchar(100)
+  
+  // Metodología y factores
+  valuation_method varchar(50) [note: "comparative, income, cost"]
+  market_conditions text
+  adjustments_applied jsonb
+  comparable_properties jsonb [note: "propiedades comparables utilizadas"]
+  
+  // Archivos y documentos
+  valuation_report_url text
+  photos_urls jsonb
+  
+  // Validez y uso
+  valid_until date
+  purpose varchar(100) [note: "propósito de la tasación"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+
+  indexes {
+    (property_id, valuation_date)
+    (valuation_type, valuation_date)
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   👥 CRM - CUSTOMER RELATIONSHIP MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Gestión integral de clientes, leads y pipeline comercial
+   🎯 CASOS DE USO:
+   • Captura y seguimiento de leads desde múltiples fuentes
+   • Pipeline de ventas/alquileres con estados definidos
+   • Historial completo de interacciones con clientes
+   • Asignación automática y manual de leads a agentes
+   • Conversión de leads a clientes (persons)
+   
+   📊 MÉTRICAS DE CRM:
+   • Tasa de conversión lead → cliente por fuente
+   • Tiempo promedio en cada etapa del pipeline
+   • Performance de agentes (leads asignados vs cerrados)
+   • ROI por canal de marketing (website, portales, redes)
+   
+   🔄 FLUJO TÍPICO:
+   1. Lead entra por web/portal/referido
+   2. Se asigna a agente disponible
+   3. Primera interacción (call/email/whatsapp)
+   4. Seguimiento con propiedades relevantes
+   5. Visitas y negociación
+   6. Conversión a contrato
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+Enum lead_status {
+  new
+  contacted
+  interested
+  viewing_scheduled
+  viewed
+  negotiating
+  qualified
+  converted
+  lost
+  inactive
+}
+
+Enum lead_source {
+  website
+  phone_call
+  email
+  social_media
+  referral
+  walk_in
+  portal_external
+  marketing_campaign
+  other
+}
+
+Table lead {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  
+  // Información básica del lead
+  first_name varchar(100)
+  last_name varchar(100)
+  email varchar(255)
+  phone varchar(32)
+  lead_status lead_status [default: 'new']
+  lead_source lead_source [default: 'other']
+  
+  // Interés específico
+  property_id uuid [ref: > property.id, note: "propiedad de interés específica"]
+  property_listing_id uuid [ref: > property_listing.id]
+  operation_type operation_type [note: "tipo de operación de interés"]
+  budget_min decimal(15,2)
+  budget_max decimal(15,2)
+  currency char(3) [default: 'ARS']
+  
+  // Preferencias de búsqueda
+  preferred_areas jsonb [note: "zonas de preferencia"]
+  property_requirements jsonb [note: "requisitos específicos de propiedad"]
+  timeline varchar(100) [note: "timeframe para la operación"]
+  
+  // Asignación y seguimiento
+  assigned_user_id uuid [ref: > users.id]
+  assigned_organization_id uuid [ref: > organization.id]
+  priority_level int [default: 3, note: "1-5, siendo 5 la máxima prioridad"]
+  
+  // Información adicional
+  notes text
+  tags jsonb [note: "etiquetas para categorización"]
+  last_contact_date timestamp
+  next_followup_date timestamp
+  conversion_date timestamp [note: "fecha de conversión a cliente"]
+  converted_person_id uuid [ref: > person.id, note: "persona creada al convertir"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
+  indexes {
+    (lead_status, assigned_user_id)
+    (property_id, lead_status)
+    (email)
+    (phone)
+    (next_followup_date)
+  }
+}
+
+// Interacciones con leads
+Table lead_interaction {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  lead_id uuid [ref: > lead.id, not null]
+  
+  // Tipo y contenido de la interacción
+  interaction_type varchar(50) [not null, note: "call, email, meeting, viewing, whatsapp"]
+  interaction_date timestamp [default: `now()`, not null]
+  duration_minutes int [note: "duración en minutos"]
+  
+  // Contenido
+  subject varchar(200)
+  description text
+  outcome varchar(100) [note: "resultado de la interacción"]
+  
+  // Seguimiento
+  follow_up_required boolean [default: false]
+  follow_up_date timestamp
+  follow_up_notes text
+  
+  // Usuario responsable
+  user_id uuid [ref: > users.id, not null]
+  
+  // Archivos adjuntos
+  attachments jsonb [note: "archivos relacionados con la interacción"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+
+  indexes {
+    (lead_id, interaction_date)
+    (user_id, interaction_date)
+    (interaction_type, interaction_date)
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   💰 FINANZAS - FINANCIAL MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Control financiero integral de transacciones inmobiliarias
+   🎯 CASOS DE USO:
+   • Registro de todos los movimientos financieros
+   • Cálculo automático de comisiones y honorarios  
+   • Conciliación bancaria y medios de pago
+   • Reportes financieros para contabilidad
+   • Control de cuentas por cobrar y por pagar
+   
+   💳 TIPOS DE TRANSACCIONES:
+   • rental_payment: Cobro de alquileres mensuales
+   • deposit: Depósitos y señas de operaciones
+   • commission: Comisiones de venta/alquiler
+   • expense_payment: Pagos de expensas
+   • sale_payment: Pagos de compraventas
+   • fee: Honorarios profesionales
+   
+   📊 CONTROL FINANCIERO:
+   • Cash flow mensual y anual
+   • Comisiones pendientes de cobro
+   • Análisis de rentabilidad por operación
+   • Proyecciones de ingresos futuros
+   
+   🔄 FLUJO DE TRANSACCIONES:
+   pending → processing → completed/failed → [refunded]
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+Enum transaction_type {
+  rental_payment       // pago de alquiler
+  deposit              // depósito/seña
+  commission           // comisión
+  expense_payment      // pago de expensas
+  sale_payment         // pago de venta
+  refund               // reembolso
+  fee                  // honorarios
+  other
+}
+
+Enum transaction_status {
+  pending
+  completed
+  failed
+  cancelled
+  refunded
+}
+
+Table financial_transaction {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  
+  // Información básica
+  transaction_number varchar(50) [unique, not null]
+  transaction_type transaction_type [not null]
+  transaction_status transaction_status [default: 'pending']
+  
+  // Relaciones
+  contract_id uuid [ref: > contract.id, note: "contrato relacionado"]
+  property_id uuid [ref: > property.id, note: "propiedad relacionada"]
+  from_person_id uuid [ref: > person.id, note: "quien paga"]
+  to_person_id uuid [ref: > person.id, note: "quien recibe"]
+  organization_id uuid [ref: > organization.id, note: "organización intermediaria"]
+  
+  // Montos
+  amount decimal(15,2) [not null]
+  currency char(3) [default: 'ARS']
+  commission_amount decimal(10,2) [default: 0]
+  commission_percentage decimal(5,2) [default: 0]
+  net_amount decimal(15,2) [note: "monto neto después de comisiones"]
+  
+  // Fechas
+  transaction_date date [not null]
+  due_date date
+  processing_date date
+  settled_date date
+  
+  // Información de pago
+  payment_method varchar(50) [note: "transfer, cash, check, card"]
+  reference_number varchar(100)
+  bank_account_id uuid [note: "cuenta bancaria utilizada"]
+  
+  // Descripción y notas
+  description text
+  internal_notes text [note: "notas internas no visibles al cliente"]
+  
+  // Archivos
+  receipt_file_url text
+  invoice_file_url text
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+
+  indexes {
+    (transaction_number) [unique]
+    (contract_id, transaction_date)
+    (from_person_id, transaction_date)
+    (to_person_id, transaction_date)
+    (transaction_status, transaction_date)
+  }
+}
+
+/* ─────────────────────────  MULTIMEDIA & DOCUMENTS  ─────────────────────── */
+
+Enum media_type {
+  photo
+  video
+  floor_plan
+  document
+  virtual_tour
+  other
+}
+
+Table property_media {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  property_id uuid [ref: > property.id, not null]
+  
+  // Información del archivo
+  media_type media_type [not null]
+  file_name varchar(255) [not null]
+  file_url text [not null]
+  file_size_bytes bigint
+  mime_type varchar(100)
+  
+  // Metadatos
+  title varchar(200)
+  description text
+  alt_text varchar(255) [note: "texto alternativo para accesibilidad"]
+  
+  // Organización y orden
+  display_order int [default: 0]
+  is_main boolean [default: false, note: "imagen principal"]
+  is_public boolean [default: true]
+  
+  // Información técnica para imágenes
+  width_px int
+  height_px int
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  created_by uuid [ref: > users.id]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
+  indexes {
+    (property_id, media_type, display_order)
+    (property_id, is_main) [unique, note: "solo una imagen principal por propiedad"]
+  }
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   🏠 PROPIEDADES - PROPERTY MANAGEMENT 
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Gestión completa del portfolio inmobiliario
+   🎯 CASOS DE USO:
+   • Registro de propiedades con características técnicas completas
+   • Clasificación por tipos (departamento, casa, oficina, local)
+   • Gestión de amenities y comodidades
+   • Administración temporal de propiedades (quién gestiona qué)
+   • Multimedia y documentación (fotos, planos, videos)
+   
+   📊 MÉTRICAS CLAVE:
+   • Portfolio total por tipo de propiedad
+   • Propiedades activas vs inactivas
+   • Distribución geográfica del portfolio
+   • Promedio de amenities por tipo de propiedad
+   • Antigüedad promedio del portfolio
+   
+   🔍 BÚSQUEDAS HABITUALES:
+   • Filtros por ubicación, precio, características
+   • Propiedades similares (matching por amenities)
+   • Disponibilidad por fecha y tipo de operación
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+// ─────────────────────────  CLASIFICACIÓN Y TIPOS  ─────────────────────────
+
+// Clasificación de los tipos de inmuebles
 Table property_type {
+  Note: '''
+  🏷️ TIPOS DE PROPIEDADES
+  
+  Catálogo maestro para clasificar todos los inmuebles:
+  
+  🏠 TIPOS RESIDENCIALES:
+  • APARTMENT: Departamentos en edificios
+  • HOUSE: Casas unifamiliares  
+  • TOWNHOUSE: Casas en complejos
+  • PENTHOUSE: Áticos y penthouses
+  
+  🏢 TIPOS COMERCIALES:
+  • OFFICE: Oficinas comerciales
+  • RETAIL: Locales comerciales
+  • WAREHOUSE: Galpones y depósitos
+  • INDUSTRIAL: Plantas industriales
+  
+  📊 CLASIFICACIÓN POR CATEGORÍA:
+  • residential: Para vivienda familiar
+  • commercial: Para actividad comercial  
+  • industrial: Para producción/manufactura
+  '''
+  
   id int [pk, increment, note: 'Identificador único del tipo de propiedad']
-  code varchar(32) [unique, not null, note: 'Código del tipo (APARTMENT, HOUSE, etc.)']
-  name varchar(100) [not null, note: 'Nombre descriptivo del tipo']
+  code varchar(32) [unique, not null, note: 'Código único (APARTMENT, HOUSE, OFFICE, etc.)']
+  name varchar(100) [not null, note: 'Nombre descriptivo para mostrar en UI']
   description text [note: 'Descripción detallada del tipo de propiedad']
-  is_active boolean [default: true, note: 'Si el tipo está activo para uso']
+  category varchar(50) [note: 'Categoría: residential, commercial, industrial']
+  is_active boolean [default: true, note: 'Si el tipo está activo para nuevas propiedades']
   created_at timestamp [not null, default: `now()`]
   updated_at timestamp
 }
@@ -558,74 +1665,460 @@ Table manager_type {
   updated_at timestamp
 }
 
-
-
 Table property {
+  Note: 'El activo físico principal. Representa un inmueble con sus características intrínsecas'
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Identificador único de la propiedad']
+  owner_person_id uuid [not null, ref: > person.id, note: 'Propietario legal del inmueble']
+  address_id uuid [unique, not null, ref: > address.id, note: 'Dirección física del inmueble']
+  property_type_id int [not null, ref: > property_type.id, note: 'Tipo de propiedad']
+  internal_code varchar(50) [note: 'Código interno para la inmobiliaria']
   
-  Note: 'El activo físico principal. Representa un inmueble con sus características intrínsecas (dirección, superficie, etc.).'
-  id uuid [pk, note: 'Identificador único de la propiedad']
-  owner_person_id uuid [not null, ref: > person.id, note: 'Referencia al propietario legal del inmueble (una persona o empresa)']
-  address_id uuid [unique, not null, ref: > address.id, note: 'Referencia a la dirección física del inmueble']
-  property_type_id int [not null, ref: > property_type.id, note: 'Referencia al tipo de propiedad']
-  internal_code varchar(50) [note: 'Código o referencia interna de la propiedad para la inmobiliaria']
-  year_built int [note: 'Año de construcción del inmueble']
+  // Características físicas básicas
+  year_built int [note: 'Año de construcción']
   bedrooms int [note: 'Cantidad de dormitorios']
-  bathrooms decimal(3,1) [note: 'Cantidad de baños (ej: 2.5 para 2 baños y 1 toilette)']
-  total_area_sqm decimal(10,2) [note: 'Superficie total en metros cuadrados']
-  covered_area_sqm decimal(10,2) [note: 'Superficie cubierta en metros cuadrados']
-  description text [note: 'Descripción general y permanente de la propiedad y sus características']
-  created_at timestamp [not null, default: `now()`, note: 'Fecha y hora de creación del registro']
-  updated_at timestamp [note: 'Fecha y hora de la última actualización del registro']
-  updated_by uuid [note: 'ID del usuario que realizó la última actualización']
-  deleted_at timestamp [note: 'Fecha y hora de borrado lógico del registro (soft delete)']
+  bathrooms decimal(3,1) [note: 'Cantidad de baños (ej: 2.5)']
+  toilets int [note: 'Cantidad de toilettes adicionales']
+  rooms int [note: 'Cantidad total de ambientes']
+  levels int [note: 'Cantidad de plantas/niveles']
+  
+  // Superficies
+  total_area_sqm decimal(10,2) [note: 'Superficie total en m²']
+  covered_area_sqm decimal(10,2) [note: 'Superficie cubierta en m²']
+  semicovered_area_sqm decimal(10,2) [note: 'Superficie semicubierta en m²']
+  uncovered_area_sqm decimal(10,2) [note: 'Superficie descubierta en m²']
+  
+  // Características adicionales
+  includes_garage boolean [default: false]
+  garage_spaces int [default: 0, note: 'Cantidad de cocheras']
+  furnished boolean [default: false]
+  
+  // Estado y condición
+  condition_rating int [note: 'Calificación del estado (1-5)']
+  last_renovation_year int [note: 'Año de última renovación']
+  
+  // Información general
+  description text [note: 'Descripción detallada de la propiedad']
+  
+  // Auditoría
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp [note: 'Soft delete']
+  
   indexes {
     owner_person_id
     property_type_id
     (internal_code) [unique]
+    (year_built)
+    (bedrooms, bathrooms)
+    (total_area_sqm)
   }
 }
 
 Table property_management {
+  Note: 'Gestión temporal de propiedades. Quién está gestionando la propiedad en un momento dado'
+  id uuid [pk, default: `uuid_generate_v4()`]
+  property_id uuid [not null, ref: > property.id, note: 'Propiedad gestionada']
+  manager_id uuid [not null, note: 'ID del administrador (persona o organización)']
+  manager_type_id int [not null, ref: > manager_type.id, note: 'Tipo de administrador']
+  organization_id uuid [ref: > organization.id, note: 'Organización gestora']
   
-  Note: 'Gestión temporal de propiedades. Representa quién está gestionando la propiedad en un momento dado (administración, alquiler, venta, etc.).'
-  id uuid [pk, note: 'Identificador único del registro de gestión']
-  property_id uuid [not null, ref: > property.id, note: 'Referencia a la propiedad gestionada']
-  manager_id uuid [not null, note: 'ID del administrador/responsable (puede ser una persona o una organización)']
-  manager_type_id int [not null, ref: > manager_type.id, note: 'Referencia al tipo de administrador']
-  start_date date [not null, note: 'Fecha de inicio de la gestión']
-  end_date date [note: 'Fecha de fin de la gestión (null si está activa)']
-  commission_percentage decimal(5,2) [note: 'Porcentaje de comisión del administrador']
-  created_at timestamp [not null, default: `now()`, note: 'Fecha y hora de creación del registro']
-  updated_at timestamp [note: 'Fecha y hora de la última actualización del registro']
-  updated_by uuid [note: 'ID del usuario que realizó la última actualización']
-  deleted_at timestamp [note: 'Fecha y hora de borrado lógico del registro (soft delete)']
+  // Período de gestión
+  start_date date [not null, note: 'Inicio de la gestión']
+  end_date date [note: 'Fin de la gestión (null si activa)']
+  is_active boolean [default: true]
+  
+  // Términos comerciales
+  commission_percentage decimal(5,2) [note: 'Porcentaje de comisión']
+  fixed_fee decimal(10,2) [note: 'Tarifa fija mensual']
+  exclusive_management boolean [default: false]
+  
+  // Servicios incluidos
+  services_included jsonb [note: 'Servicios incluidos en la gestión']
+  
+  // Auditoría
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
   indexes {
     property_id
     manager_id
     manager_type_id
+    organization_id
     (property_id, start_date, end_date)
+    (is_active)
   }
 }
 
 Table amenity {
+  Note: 'Catálogo maestro de comodidades que puede tener una propiedad'
+  id int [pk, increment]
+  name varchar(100) [unique, not null, note: 'Nombre de la comodidad']
+  category amenity_category [note: 'Categoría de la comodidad']
+  icon_url text [note: 'URL del ícono']
+  is_active boolean [default: true]
   
-  Note: 'Catálogo maestro de todas las posibles comodidades o características que puede tener una propiedad (ej: Piscina, Gimnasio).'
-  id int [pk, increment, note: 'Identificador único de la comodidad']
-  name varchar(100) [unique, not null, note: 'Nombre de la comodidad (ej: "Aire Acondicionado")']
-  category amenity_category [note: 'Categoría a la que pertenece la comodidad']
-  icon_url text [note: 'URL a un ícono representativo']
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+  
+  indexes {
+    (category, name)
+    (is_active)
+  }
 }
 
 Table property_amenities {
+  Note: 'Relación muchos-a-muchos entre propiedades y comodidades'
+  property_id uuid [not null, ref: > property.id]
+  amenity_id int [not null, ref: > amenity.id]
+  note text [note: 'Nota específica sobre esta comodidad en esta propiedad']
   
-  Note: 'Tabla de unión que establece una relación muchos-a-muchos entre propiedades y sus comodidades.'
-  property_id uuid [not null, ref: > property.id, note: 'Referencia a la propiedad']
-  amenity_id jsonb [note: 'Referencia a la comodidad']
-  note text [note: 'Nota adicional sobre la comodidad en esta propiedad específica (ej: "Parrilla en balcón")']
+  created_at timestamp [not null, default: `now()`]
+  
   indexes {
     (property_id, amenity_id) [pk]
   }
 }
 
+// Enum para categorías de amenities (actualizado según el frontend)
+Enum amenity_category {
+  general       // características generales
+  services      // servicios
+  environments  // ambientes
+  security      // seguridad
+  comfort       // confort/comodidad
+}
 
-Ref: "users"."last_login" < "users"."person_id"
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   💬 COMUNICACIONES - NOTIFICATIONS & MESSAGING
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Sistema integral de comunicaciones y notificaciones
+   🎯 CASOS DE USO:
+   • Notificaciones automáticas de vencimientos de contratos
+   • Alertas de pagos atrasados y cobros
+   • Comunicación multicanal (email, SMS, WhatsApp, push)
+   • Notificaciones de nuevos leads y consultas
+   • Updates de estado de propiedades y operaciones
+   
+   📱 CANALES DE COMUNICACIÓN:
+   • in_app: Notificaciones dentro de la plataforma
+   • email: Correos electrónicos automáticos y manuales
+   • sms: Mensajes de texto para alertas urgentes
+   • whatsapp: Integración con WhatsApp Business
+   • push: Notificaciones push móviles
+   
+   🎯 TIPOS DE NOTIFICACIONES:
+   • lead_inquiry: Nueva consulta de cliente potencial
+   • contract_expiring: Contrato próximo a vencer
+   • payment_due: Pago vencido o próximo a vencer
+   • property_viewed: Visita registrada a propiedad
+   • new_offer: Nueva oferta recibida
+   
+   📊 MÉTRICAS DE COMUNICACIÓN:
+   • Tasa de apertura por canal
+   • Efectividad de notificaciones (CTR)
+   • Preferencias de canal por tipo de usuario
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+Enum notification_type {
+  lead_inquiry          // nueva consulta de lead
+  contract_expiring     // contrato próximo a vencer
+  payment_due           // pago vencido
+  payment_received      // pago recibido
+  property_viewed       // propiedad visitada
+  new_offer            // nueva oferta
+  system_alert         // alerta del sistema
+  marketing_update     // actualización de marketing
+}
+
+Enum notification_channel {
+  in_app       // notificación dentro de la aplicación
+  email        // correo electrónico
+  sms          // mensaje de texto
+  whatsapp     // WhatsApp
+  push         // notificación push
+}
+
+Table notification {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  recipient_user_id uuid [ref: > users.id, not null]
+  notification_type notification_type [not null]
+  
+  // Contenido
+  title varchar(200) [not null]
+  message text [not null]
+  action_url text [note: "URL para acción relacionada"]
+  
+  // Estado
+  is_read boolean [default: false]
+  read_at timestamp
+  
+  // Metadata
+  related_entity_type varchar(50) [note: "property, contract, lead, etc."]
+  related_entity_id uuid [note: "ID de la entidad relacionada"]
+  metadata jsonb [note: "datos adicionales específicos del tipo"]
+  
+  // Canales de envío
+  channels notification_channel[] [note: "canales donde se envió"]
+  sent_at timestamp
+  delivery_status jsonb [note: "estado de entrega por canal"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  expires_at timestamp [note: "cuándo expira la notificación"]
+
+  indexes {
+    (recipient_user_id, is_read, created_at)
+    (notification_type, created_at)
+    (related_entity_type, related_entity_id)
+  }
+}
+
+/* ─────────────────────────  TASKS & WORKFLOW  ─────────────────────── */
+
+Enum task_status {
+  pending
+  in_progress
+  completed
+  cancelled
+  overdue
+}
+
+Enum task_priority {
+  low
+  medium
+  high
+  urgent
+}
+
+Table task {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  
+  // Información básica
+  title varchar(200) [not null]
+  description text
+  task_status task_status [default: 'pending']
+  task_priority task_priority [default: 'medium']
+  
+  // Asignación
+  assigned_to_user_id uuid [ref: > users.id, not null]
+  assigned_by_user_id uuid [ref: > users.id, not null]
+  organization_id uuid [ref: > organization.id]
+  
+  // Fechas
+  due_date timestamp
+  completed_at timestamp
+  
+  // Relaciones
+  related_entity_type varchar(50) [note: "property, contract, lead, person"]
+  related_entity_id uuid
+  
+  // Categorización
+  category varchar(100) [note: "follow_up, inspection, documentation, etc."]
+  tags jsonb [note: "etiquetas para categorización"]
+  
+  // Progreso y notas
+  progress_percentage int [default: 0]
+  notes text
+  
+  // Recordatorios
+  reminder_date timestamp
+  recurring_pattern varchar(50) [note: "daily, weekly, monthly, etc."]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+
+  indexes {
+    (assigned_to_user_id, task_status, due_date)
+    (task_status, task_priority)
+    (related_entity_type, related_entity_id)
+    (due_date, task_status)
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   📊 REPORTES & ANALYTICS - BUSINESS INTELLIGENCE
+   ═══════════════════════════════════════════════════════════════════════════════════
+   
+   📋 FUNCIONALIDAD: Sistema avanzado de reportes y análisis de datos
+   🎯 CASOS DE USO:
+   • Dashboards ejecutivos con KPIs principales
+   • Reportes financieros automatizados
+   • Análisis de performance de agentes
+   • Estudios de mercado y tendencias
+   • Reportes regulatorios y contables
+   
+   📈 TIPOS DE REPORTES:
+   • financial: Estados financieros, cash flow, comisiones
+   • marketing: Performance de campaigns, ROI por canal
+   • operational: Métricas de propiedades, tiempo en mercado
+   • sales: Pipeline, conversiones, performance de agentes
+   • compliance: Reportes regulatorios, auditorías
+   
+   ⚙️ CARACTERÍSTICAS AVANZADAS:
+   • Generación automática programada (cron jobs)
+   • Exportación a múltiples formatos (PDF, Excel, CSV)
+   • Filtros dinámicos y drill-down
+   • Comparaciones período vs período
+   • Envío automático por email
+   
+   📊 MÉTRICAS CLAVE:
+   • Revenue per property
+   • Conversion rate pipeline
+   • Average days on market
+   • Agent productivity metrics
+   • Customer acquisition cost
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+Table report_template {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  name varchar(200) [not null]
+  description text
+  report_type varchar(100) [not null, note: "financial, marketing, operational, etc."]
+  
+  // Configuración del reporte
+  query_config jsonb [not null, note: "configuración de consultas y filtros"]
+  chart_config jsonb [note: "configuración de gráficos y visualizaciones"]
+  
+  // Acceso y permisos
+  is_public boolean [default: false]
+  created_by_user_id uuid [ref: > users.id, not null]
+  organization_id uuid [ref: > organization.id]
+  
+  // Programación automática
+  auto_generate boolean [default: false]
+  schedule_pattern varchar(100) [note: "cron-like pattern"]
+  recipients jsonb [note: "destinatarios para envío automático"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+  deleted_at timestamp
+
+  indexes {
+    (report_type, organization_id)
+    (created_by_user_id)
+    (auto_generate)
+  }
+}
+
+Table report_execution {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  report_template_id uuid [ref: > report_template.id, not null]
+  
+  // Ejecución
+  executed_at timestamp [default: `now()`, not null]
+  executed_by_user_id uuid [ref: > users.id]
+  execution_time_ms int [note: "tiempo de ejecución en milisegundos"]
+  
+  // Parámetros utilizados
+  parameters_used jsonb [note: "parámetros y filtros aplicados"]
+  date_range_from date
+  date_range_to date
+  
+  // Resultados
+  result_data jsonb [note: "datos del reporte generado"]
+  file_url text [note: "URL del archivo generado (PDF, Excel, etc.)"]
+  record_count int [note: "cantidad de registros en el reporte"]
+  
+  // Estado
+  status varchar(50) [default: 'completed', note: "completed, failed, processing"]
+  error_message text [note: "mensaje de error si falló"]
+
+  indexes {
+    (report_template_id, executed_at)
+    (executed_by_user_id, executed_at)
+    (status, executed_at)
+  }
+}
+
+/* ─────────────────────────  SYSTEM CONFIGURATION  ─────────────────────── */
+
+Table system_setting {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  setting_key varchar(100) [unique, not null]
+  setting_value jsonb [not null]
+  description text
+  data_type varchar(50) [note: "string, number, boolean, json, etc."]
+  
+  // Scope y contexto
+  scope varchar(50) [default: 'global', note: "global, organization, user"]
+  organization_id uuid [ref: > organization.id, note: "para settings específicos de org"]
+  
+  // Validación
+  validation_rules jsonb [note: "reglas de validación para el valor"]
+  is_sensitive boolean [default: false, note: "si contiene información sensible"]
+  
+  // Auditoría
+  created_at timestamp [default: `now()`, not null]
+  updated_at timestamp
+  updated_by uuid [ref: > users.id]
+
+  indexes {
+    (setting_key) [unique]
+    (scope, organization_id)
+  }
+}
+
+/* ─────────────────────────  AUDIT & LOGGING  ─────────────────────── */
+
+Enum audit_action {
+  create
+  read
+  update
+  delete
+  login
+  logout
+  export
+  import
+  approve
+  reject
+}
+
+Table audit_log {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  
+  // Información del usuario y acción
+  user_id uuid [ref: > users.id]
+  organization_id uuid [ref: > organization.id]
+  action audit_action [not null]
+  
+  // Entidad afectada
+  entity_type varchar(100) [not null, note: "property, contract, user, etc."]
+  entity_id uuid [not null]
+  
+  // Detalles de la acción
+  description text [not null]
+  old_values jsonb [note: "valores anteriores (para updates/deletes)"]
+  new_values jsonb [note: "valores nuevos (para creates/updates)"]
+  
+  // Contexto técnico
+  ip_address inet
+  user_agent text
+  session_id varchar(255)
+  api_endpoint varchar(255)
+  http_method varchar(10)
+  
+  // Metadata adicional
+  metadata jsonb [note: "información adicional específica del contexto"]
+  
+  // Timestamp
+  created_at timestamp [default: `now()`, not null]
+
+  indexes {
+    (user_id, created_at)
+    (entity_type, entity_id, created_at)
+    (action, created_at)
+    (organization_id, created_at)
+    (created_at) [note: "para consultas por rango de fechas"]
+  }
+}
+
+

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rem-gestion/api-suite/property/src/dto"
+	"github.com/rem-gestion/api-suite/property/src/grpc/clients"
 	"github.com/rem-gestion/api-suite/property/src/models"
 	"github.com/rem-gestion/api-suite/property/src/repository"
 	"go.uber.org/zap"
@@ -19,19 +20,30 @@ type PropertyManagementService interface {
 }
 
 type propertyManagementService struct {
-	repo   repository.PropertyManagementRepository
-	logger *zap.Logger
+	repo          repository.PropertyManagementRepository
+	clientManager *clients.ClientManager
+	logger        *zap.Logger
 }
 
-func NewPropertyManagementService(repo repository.PropertyManagementRepository, logger *zap.Logger) PropertyManagementService {
+func NewPropertyManagementService(repo repository.PropertyManagementRepository, clientManager *clients.ClientManager, logger *zap.Logger) PropertyManagementService {
 	return &propertyManagementService{
-		repo:   repo,
-		logger: logger.Named("property-management-service"),
+		repo:          repo,
+		clientManager: clientManager,
+		logger:        logger.Named("property-management-service"),
 	}
 }
 
 func (s *propertyManagementService) Create(ctx context.Context, req *dto.PropertyManagementCreateRequest) (*dto.PropertyManagementResponse, error) {
 	s.logger.Info("creating property management", zap.String("property_id", req.PropertyID.String()))
+
+	// Validate manager exists (via gRPC) - puede ser Person u Organization según manager_type_id
+	if err := s.clientManager.ValidateManagerExists(ctx, req.ManagerPersonID.String(), req.ManagerTypeID); err != nil {
+		s.logger.Warn("manager validation failed",
+			zap.String("manager_id", req.ManagerPersonID.String()),
+			zap.Int32("manager_type_id", req.ManagerTypeID),
+			zap.Error(err))
+		return nil, err
+	}
 
 	propertyManagement := &models.PropertyManagement{
 		ID:                   uuid.New(),

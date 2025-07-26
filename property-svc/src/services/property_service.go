@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/rem-gestion/api-suite/property/src/dto"
+	"github.com/rem-gestion/api-suite/property/src/grpc/clients"
 	"github.com/rem-gestion/api-suite/property/src/models"
 	"github.com/rem-gestion/api-suite/property/src/repository"
 	"go.uber.org/zap"
@@ -15,6 +17,7 @@ type PropertyService struct {
 	propertyTypeRepo       repository.PropertyTypeRepository
 	propertyManagementRepo repository.PropertyManagementRepository
 	propertyAmenityRepo    repository.PropertyAmenityRepository
+	clientManager          *clients.ClientManager
 	lg                     *zap.Logger
 }
 
@@ -23,6 +26,7 @@ func NewPropertyService(
 	propertyTypeRepo repository.PropertyTypeRepository,
 	propertyManagementRepo repository.PropertyManagementRepository,
 	propertyAmenityRepo repository.PropertyAmenityRepository,
+	clientManager *clients.ClientManager,
 	lg *zap.Logger,
 ) *PropertyService {
 	return &PropertyService{
@@ -30,6 +34,7 @@ func NewPropertyService(
 		propertyTypeRepo:       propertyTypeRepo,
 		propertyManagementRepo: propertyManagementRepo,
 		propertyAmenityRepo:    propertyAmenityRepo,
+		clientManager:          clientManager,
 		lg:                     lg.Named("property-service"),
 	}
 }
@@ -37,10 +42,28 @@ func NewPropertyService(
 func (s *PropertyService) Create(in dto.PropertyCreate, createdBy *uuid.UUID) (*dto.PropertyResponse, error) {
 	s.lg.Debug("create property request", zap.Any("payload", in))
 
+	ctx := context.Background()
+
 	// Validate property type exists
 	_, err := s.propertyTypeRepo.GetByID(in.PropertyTypeID)
 	if err != nil {
 		s.lg.Warn("property type not found", zap.Int32("property_type_id", in.PropertyTypeID))
+		return nil, err
+	}
+
+	// Validate address exists (via gRPC)
+	if err := s.clientManager.ValidateAddressExists(ctx, in.AddressID.String()); err != nil {
+		s.lg.Warn("address validation failed",
+			zap.String("address_id", in.AddressID.String()),
+			zap.Error(err))
+		return nil, err
+	}
+
+	// Validate owner person exists (via gRPC)
+	if err := s.clientManager.ValidatePersonExists(ctx, in.OwnerPersonID.String()); err != nil {
+		s.lg.Warn("owner person validation failed",
+			zap.String("owner_person_id", in.OwnerPersonID.String()),
+			zap.Error(err))
 		return nil, err
 	}
 
@@ -126,6 +149,10 @@ func (s *PropertyService) List(req dto.PropertyListRequest) (*dto.ListResponse, 
 	for _, property := range properties {
 		responses = append(responses, *s.toPropertyResponse(&property))
 	}
+
+	s.lg.Debug("property list result",
+		zap.Int("responses_count", len(responses)),
+		zap.Int64("total_count", total))
 
 	return &dto.ListResponse{
 		Data:  responses,

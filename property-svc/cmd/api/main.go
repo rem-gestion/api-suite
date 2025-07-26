@@ -22,6 +22,8 @@ import (
 
 	/* ───── capas locales ───── */
 	"github.com/rem-gestion/api-suite/property/src/controllers"
+	"github.com/rem-gestion/api-suite/property/src/grpc/clients"
+	"github.com/rem-gestion/api-suite/property/src/grpc/server"
 	"github.com/rem-gestion/api-suite/property/src/repository"
 	"github.com/rem-gestion/api-suite/property/src/router"
 	"github.com/rem-gestion/api-suite/property/src/services"
@@ -40,17 +42,35 @@ func main() {
 		}
 	}
 
+	// Get gRPC port from environment variable
+	grpcPort := 50054 // default gRPC port for property service (matches .env.development)
+	if portStr := os.Getenv("REM_PROPERTY_GRPC_PORT"); portStr != "" {
+		if port, err := strconv.Atoi(portStr); err == nil {
+			grpcPort = port
+		}
+	}
+
 	// Mostrar información del entorno
 	lg.Info("starting property service",
 		zap.String("service", cfg.ServiceName),
 		zap.String("environment", cfg.Environment.String()),
 		zap.String("database", cfg.Postgres.Database),
-		zap.String("http_port", fmt.Sprintf("%d", serverPort)))
+		zap.String("http_port", fmt.Sprintf("%d", serverPort)),
+		zap.String("grpc_port", fmt.Sprintf("%d", grpcPort)))
 
 	/* ---------- Postgres ---------- */
 	pg, err := db.NewPostgres(cfg.Postgres)
 	if err != nil {
 		lg.Fatal("postgres connect failed", zap.Error(err))
+	}
+
+	/* ---------- gRPC clients ---------- */
+	clientConfig := clients.LoadClientConfigFromEnv(&cfg)
+	clientManager, err := clients.NewClientManager(clientConfig, lg)
+	if err != nil {
+		lg.Warn("failed to initialize gRPC clients", zap.Error(err))
+		// Continue without external validations
+		clientManager = nil
 	}
 
 	/* ---------- repositories ---------- */
@@ -67,12 +87,13 @@ func main() {
 		propertyTypeRepo,
 		propertyManagementRepo,
 		propertyAmenityRepo,
+		clientManager,
 		lg,
 	)
 	propertyTypeService := services.NewPropertyTypeService(propertyTypeRepo, lg)
 	managerTypeService := services.NewManagerTypeService(managerTypeRepo, lg)
 	amenityService := services.NewAmenityService(amenityRepo, lg)
-	propertyManagementService := services.NewPropertyManagementService(propertyManagementRepo, lg)
+	propertyManagementService := services.NewPropertyManagementService(propertyManagementRepo, clientManager, lg)
 
 	/* ---------- controllers ---------- */
 	propertyController := controllers.NewPropertyController(propertyService)
@@ -101,9 +122,21 @@ func main() {
 	)
 	appRouter.SetupRoutes(r) // /properties, /amenities...
 
+	/* ---------- gRPC server ---------- */
+	grpcServer := server.NewPropertyGRPCServer(propertyService, lg)
+
 	httpSrv := &http.Server{Addr: fmt.Sprintf(":%d", serverPort), Handler: r}
 
-	/* ---------- lanzar servidor HTTP ---------- */
+	/* ---------- lanzar servidores ---------- */
+	// Start gRPC server
+	go func() {
+		lg.Info("gRPC listening", zap.String("addr", fmt.Sprintf("0.0.0.0:%d", grpcPort)))
+		if err := grpcServer.Start(grpcPort); err != nil {
+			lg.Fatal("gRPC failed", zap.Error(err))
+		}
+	}()
+
+	// Start HTTP server
 	go func() {
 		lg.Info("REST listening", zap.String("addr", httpSrv.Addr))
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -117,10 +150,18 @@ func main() {
 	<-quit
 	lg.Info("shutting down…")
 
+	// Stop gRPC server
+	grpcServer.Stop()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_ = httpSrv.Shutdown(ctx)
+
+	// Close gRPC clients
+	if clientManager != nil {
+		_ = clientManager.Close()
+	}
 
 	if sqlDB, err := pg.DB(); err == nil {
 		sqlDB.Close()
