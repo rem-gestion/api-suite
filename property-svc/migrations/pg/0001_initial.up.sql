@@ -39,7 +39,7 @@ CREATE TABLE property (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   owner_person_id       UUID NOT NULL,
   address_id            UUID UNIQUE NOT NULL,
-  property_type_id      INTEGER NOT NULL REFERENCES type(id),
+  property_type_id      INTEGER NOT NULL REFERENCES property_type(id),
   internal_code         VARCHAR(50),
   year_built            INTEGER,
   bedrooms              INTEGER,
@@ -85,13 +85,13 @@ CREATE INDEX idx_property_owner ON property(owner_person_id);
 CREATE INDEX idx_property_type ON property(property_type_id);
 CREATE UNIQUE INDEX idx_property_internal_code ON property(internal_code) WHERE internal_code IS NOT NULL;
 
-CREATE INDEX idx_management_property ON management(property_id);
-CREATE INDEX idx_management_manager ON management(manager_id);
-CREATE INDEX idx_management_type ON management(manager_type_id);
-CREATE INDEX idx_management_dates ON management(property_id, start_date, end_date);
+CREATE INDEX idx_management_property ON property_management(property_id);
+CREATE INDEX idx_management_manager ON property_management(manager_id);
+CREATE INDEX idx_management_type ON property_management(manager_type_id);
+CREATE INDEX idx_management_dates ON property_management(property_id, start_date, end_date);
 
 -- Insert initial property types
-INSERT INTO type (code, name, description, category) VALUES
+INSERT INTO property_type (code, name, description, category) VALUES
   ('APARTMENT', 'Departamento', 'Departamento en edificio', 'residential'),
   ('HOUSE', 'Casa', 'Casa unifamiliar', 'residential'),
   ('PH', 'PH', 'Propiedad horizontal', 'residential'),
@@ -149,8 +149,9 @@ INSERT INTO amenity (name, category) VALUES
   ('Agua Corriente', 'services'),
   ('Gas Natural', 'services'),
   ('Gas Envasado', 'services'),
+  ('Electricidad', 'services'),
   ('Cloacas', 'services'),
-  ('APARTMENT', 'Departamento', 'Departamento en edificio', 'residential'),
+  ('Internet', 'services'),
   ('Cable', 'services'),
   ('Teléfono', 'services'),
   ('Aire Acondicionado', 'services'),
@@ -172,6 +173,7 @@ INSERT INTO amenity (name, category) VALUES
   ('Cocina', 'environments'),
   ('Cocina Integrada', 'environments'),
   ('Office', 'environments'),
+  ('Toilette', 'environments'),
   ('Hall de Distribución', 'environments'),
   ('Vestidor', 'environments'),
   ('Suite', 'environments'),
@@ -387,7 +389,7 @@ INSERT INTO property (
   );
 
 -- Insert example property management relationships
-INSERT INTO management (
+INSERT INTO property_management (
   id,
   property_id,
   manager_id,

@@ -161,9 +161,11 @@ BEGIN
     RAISE NOTICE 'Contactos insertados: %', (SELECT COUNT(*) FROM person_contacto);
     RAISE NOTICE '─────────────────────────────────────────────────────────────────';
     RAISE NOTICE 'PROPERTY SERVICE:';
-    RAISE NOTICE 'Property Types: %', (SELECT COUNT(*) FROM property_type);
+    RAISE NOTICE 'Property Types: %', (SELECT COUNT(*) FROM property_property_type);
     RAISE NOTICE 'Amenities: %', (SELECT COUNT(*) FROM property_amenity);
     RAISE NOTICE 'Properties: %', (SELECT COUNT(*) FROM property_property);
+    RAISE NOTICE 'Manager Types: %', (SELECT COUNT(*) FROM property_manager_type);
+    RAISE NOTICE 'Properties Management: %', (SELECT COUNT(*) FROM property_property_management);
     RAISE NOTICE 'Property Amenities: %', (SELECT COUNT(*) FROM property_property_amenities);
     RAISE NOTICE 'Property Listings: %', (SELECT COUNT(*) FROM property_listings);
     RAISE NOTICE 'Property Media: %', (SELECT COUNT(*) FROM property_media);
