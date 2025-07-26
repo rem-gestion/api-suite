@@ -812,11 +812,11 @@
 			]
 		},
 		{
-			"name": "🏢 Properties & Real Estate",
+			"name": "🏢 Properties",
 			"description": "Property management: real estate properties, amenities, property types, and property management",
 			"item": [
 				{
-					"name": "🏢 Properties Management",
+					"name": "🏢 Property",
 					"description": "CRUD operations for properties",
 					"item": [
 						{
@@ -1017,7 +1017,7 @@
 					]
 				},
 				{
-					"name": "🏷️ Property Types",
+					"name": "🏷️ Types",
 					"description": "CRUD operations for property types catalog",
 					"item": [
 						{
@@ -1156,7 +1156,7 @@
 					]
 				},
 				{
-					"name": "🏢 Property Management",
+					"name": "🏢 Management",
 					"description": "Property management assignments and commissions",
 					"item": [
 						{
@@ -1389,7 +1389,7 @@
 					]
 				},
 				{
-					"name": "🎯 Amenities Management",
+					"name": "🎯 Amenities",
 					"description": "CRUD operations for property amenities",
 					"item": [
 						{
@@ -1579,6 +1579,542 @@
 									"path": ["api", "properties", "{{property_id}}", "amenities", "{{amenity_id}}"]
 								},
 								"description": "Remove an amenity from a property"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "📋 Listings",
+					"description": "Property listing management endpoints",
+					"item": [
+						{
+							"name": "🎯 Get All Listings",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings"]
+								},
+								"description": "Get all property listings with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Get Listing by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings", "1"]
+								},
+								"description": "Get a specific property listing by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "🏠 Get Listings by Property",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/1/listings",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "1", "listings"]
+								},
+								"description": "Get all listings for a specific property"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Search Listings",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings/search?status=ACTIVE&listing_type=SALE&min_price=100000&max_price=500000",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings", "search"],
+									"query": [
+										{
+											"key": "status",
+											"value": "ACTIVE"
+										},
+										{
+											"key": "listing_type",
+											"value": "SALE"
+										},
+										{
+											"key": "min_price",
+											"value": "100000"
+										},
+										{
+											"key": "max_price",
+											"value": "500000"
+										}
+									]
+								},
+								"description": "Search property listings with filters"
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Create Listing",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"property_id\": 1,\n  \"listing_type\": \"SALE\",\n  \"price\": 350000,\n  \"currency\": \"USD\",\n  \"status\": \"ACTIVE\",\n  \"description\": \"Beautiful family home with modern amenities\",\n  \"listing_date\": \"2024-01-15T00:00:00Z\",\n  \"is_featured\": false,\n  \"contact_info\": {\n    \"phone\": \"+1-555-0123\",\n    \"email\": \"agent@realestate.com\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings"]
+								},
+								"description": "Create a new property listing"
+							},
+							"response": []
+						},
+						{
+							"name": "✏️ Update Listing",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"price\": 345000,\n  \"status\": \"ACTIVE\",\n  \"description\": \"Beautiful family home with updated modern amenities\",\n  \"is_featured\": true,\n  \"contact_info\": {\n    \"phone\": \"+1-555-0123\",\n    \"email\": \"agent@realestate.com\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings", "1"]
+								},
+								"description": "Update an existing property listing"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Listing",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/listings/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "listings", "1"]
+								},
+								"description": "Delete a property listing"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "📷 Media",
+					"description": "Property media management endpoints",
+					"item": [
+						{
+							"name": "🖼️ Get All Media",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/media",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media"]
+								},
+								"description": "Get all property media with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Get Media by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/media/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media", "1"]
+								},
+								"description": "Get a specific media item by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "🏠 Get Media by Property",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/1/media",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "1", "media"]
+								},
+								"description": "Get all media for a specific property"
+							},
+							"response": []
+						},
+						{
+							"name": "📸 Upload Media",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "property_id",
+											"value": "1",
+											"type": "text"
+										},
+										{
+											"key": "media_type",
+											"value": "IMAGE",
+											"type": "text"
+										},
+										{
+											"key": "title",
+											"value": "Living Room",
+											"type": "text"
+										},
+										{
+											"key": "description",
+											"value": "Spacious living room with natural lighting",
+											"type": "text"
+										},
+										{
+											"key": "display_order",
+											"value": "1",
+											"type": "text"
+										},
+										{
+											"key": "file",
+											"type": "file",
+											"src": []
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/media",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media"]
+								},
+								"description": "Upload media file for a property"
+							},
+							"response": []
+						},
+						{
+							"name": "✏️ Update Media",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Updated Living Room\",\n  \"description\": \"Spacious living room with updated modern lighting\",\n  \"display_order\": 2,\n  \"is_main\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/media/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media", "1"]
+								},
+								"description": "Update media item details"
+							},
+							"response": []
+						},
+						{
+							"name": "⭐ Set Main Image",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/media/1/main",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media", "1", "main"]
+								},
+								"description": "Set media item as main image for property"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Media",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/media/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "media", "1"]
+								},
+								"description": "Delete a media item"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "💰 Valuations",
+					"description": "Property valuation management endpoints",
+					"item": [
+						{
+							"name": "📊 Get All Valuations",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/valuations",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "valuations"]
+								},
+								"description": "Get all property valuations with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "🔍 Get Valuation by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/valuations/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "valuations", "1"]
+								},
+								"description": "Get a specific valuation by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "🏠 Get Valuations by Property",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/1/valuations",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "1", "valuations"]
+								},
+								"description": "Get all valuations for a specific property"
+							},
+							"response": []
+						},
+						{
+							"name": "⭐ Get Latest Valuation",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/1/valuations/latest",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "1", "valuations", "latest"]
+								},
+								"description": "Get the most recent valuation for a property"
+							},
+							"response": []
+						},
+						{
+							"name": "➕ Create Valuation",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"property_id\": 1,\n  \"valuation_date\": \"2024-01-15T00:00:00Z\",\n  \"valuation_amount\": 450000,\n  \"currency\": \"USD\",\n  \"valuation_type\": \"MARKET\",\n  \"valuator_name\": \"John Smith\",\n  \"valuator_license\": \"RE-12345\",\n  \"methodology\": \"Comparative Market Analysis\",\n  \"notes\": \"Based on recent comparable sales in the area\",\n  \"confidence_level\": \"HIGH\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/valuations",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "valuations"]
+								},
+								"description": "Create a new property valuation"
+							},
+							"response": []
+						},
+						{
+							"name": "✏️ Update Valuation",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"valuation_amount\": 460000,\n  \"methodology\": \"Updated Comparative Market Analysis\",\n  \"notes\": \"Revised based on new comparable sales data\",\n  \"confidence_level\": \"HIGH\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/properties/valuations/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "valuations", "1"]
+								},
+								"description": "Update an existing property valuation"
+							},
+							"response": []
+						},
+						{
+							"name": "🗑️ Delete Valuation",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/properties/valuations/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "properties", "valuations", "1"]
+								},
+								"description": "Delete a property valuation"
 							},
 							"response": []
 						}

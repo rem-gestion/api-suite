@@ -31,6 +31,36 @@ service PropertyManagementService {
   rpc ListPropertyManagements(ListPropertyManagementsRequest) returns (ListPropertyManagementsResponse);
 }
 
+// PropertyListing Service
+service PropertyListingService {
+  rpc CreatePropertyListing(CreatePropertyListingRequest) returns (PropertyListingResponse);
+  rpc GetPropertyListing(GetPropertyListingRequest) returns (PropertyListingResponse);
+  rpc UpdatePropertyListing(UpdatePropertyListingRequest) returns (PropertyListingResponse);
+  rpc DeletePropertyListing(DeletePropertyListingRequest) returns (DeletePropertyListingResponse);
+  rpc ListPropertyListings(ListPropertyListingsRequest) returns (ListPropertyListingsResponse);
+  rpc SearchPropertyListings(SearchPropertyListingsRequest) returns (ListPropertyListingsResponse);
+}
+
+// PropertyMedia Service
+service PropertyMediaService {
+  rpc CreatePropertyMedia(CreatePropertyMediaRequest) returns (PropertyMediaResponse);
+  rpc GetPropertyMedia(GetPropertyMediaRequest) returns (PropertyMediaResponse);
+  rpc UpdatePropertyMedia(UpdatePropertyMediaRequest) returns (PropertyMediaResponse);
+  rpc DeletePropertyMedia(DeletePropertyMediaRequest) returns (DeletePropertyMediaResponse);
+  rpc ListPropertyMedia(ListPropertyMediaRequest) returns (ListPropertyMediaResponse);
+  rpc SetMainMedia(SetMainMediaRequest) returns (PropertyMediaResponse);
+}
+
+// PropertyValuation Service
+service PropertyValuationService {
+  rpc CreatePropertyValuation(CreatePropertyValuationRequest) returns (PropertyValuationResponse);
+  rpc GetPropertyValuation(GetPropertyValuationRequest) returns (PropertyValuationResponse);
+  rpc UpdatePropertyValuation(UpdatePropertyValuationRequest) returns (PropertyValuationResponse);
+  rpc DeletePropertyValuation(DeletePropertyValuationRequest) returns (DeletePropertyValuationResponse);
+  rpc ListPropertyValuations(ListPropertyValuationsRequest) returns (ListPropertyValuationsResponse);
+  rpc GetLatestValuation(GetLatestValuationRequest) returns (PropertyValuationResponse);
+}
+
 // Messages
 message CreatePropertyRequest {
   string internal_code = 1;
@@ -177,4 +207,296 @@ message PropertyManagementResponse {
 message ListPropertyManagementsResponse {
   repeated PropertyManagementResponse property_managements = 1;
   int64 total = 2;
+}
+
+// PropertyListing Messages
+message PropertyListing {
+  int64 id = 1;
+  int64 property_id = 2;
+  string listing_type = 3; // rent, sale, both
+  string status = 4; // active, inactive, sold, rented, pending
+  string sale_price = 5;
+  string rent_price = 6;
+  string currency = 7;
+  string availability_date = 8;
+  string listing_date = 9;
+  bool is_featured = 10;
+  string description = 11;
+  repeated string tags = 12;
+  int32 views_count = 13;
+  int32 inquiries_count = 14;
+  string seo_title = 15;
+  string seo_description = 16;
+  string seo_keywords = 17;
+  bool is_published = 18;
+  string published_at = 19;
+  string expires_at = 20;
+  string created_at = 21;
+  string updated_at = 22;
+}
+
+message CreatePropertyListingRequest {
+  int64 property_id = 1;
+  string listing_type = 2;
+  string status = 3;
+  string sale_price = 4;
+  string rent_price = 5;
+  string currency = 6;
+  string availability_date = 7;
+  bool is_featured = 8;
+  string description = 9;
+  repeated string tags = 10;
+  string seo_title = 11;
+  string seo_description = 12;
+  string seo_keywords = 13;
+  bool is_published = 14;
+  string expires_at = 15;
+}
+
+message UpdatePropertyListingRequest {
+  int64 id = 1;
+  string listing_type = 2;
+  string status = 3;
+  string sale_price = 4;
+  string rent_price = 5;
+  string currency = 6;
+  string availability_date = 7;
+  bool is_featured = 8;
+  string description = 9;
+  repeated string tags = 10;
+  string seo_title = 11;
+  string seo_description = 12;
+  string seo_keywords = 13;
+  bool is_published = 14;
+  string expires_at = 15;
+}
+
+message GetPropertyListingRequest {
+  int64 id = 1;
+}
+
+message DeletePropertyListingRequest {
+  int64 id = 1;
+}
+
+message ListPropertyListingsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  int64 property_id = 3;
+  string listing_type = 4;
+  string status = 5;
+  bool is_featured = 6;
+  bool is_published = 7;
+}
+
+message SearchPropertyListingsRequest {
+  string query = 1;
+  string listing_type = 2;
+  string min_price = 3;
+  string max_price = 4;
+  string currency = 5;
+  repeated string tags = 6;
+  int32 page = 7;
+  int32 limit = 8;
+}
+
+message PropertyListingResponse {
+  PropertyListing listing = 1;
+  string message = 2;
+  bool success = 3;
+}
+
+message ListPropertyListingsResponse {
+  repeated PropertyListing listings = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  string message = 5;
+  bool success = 6;
+}
+
+message DeletePropertyListingResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// PropertyMedia Messages
+message PropertyMedia {
+  int64 id = 1;
+  int64 property_id = 2;
+  string media_type = 3; // image, video, 360_tour, floor_plan
+  string file_url = 4;
+  string thumbnail_url = 5;
+  string title = 6;
+  string description = 7;
+  int32 display_order = 8;
+  bool is_main = 9;
+  string file_size = 10;
+  string mime_type = 11;
+  int32 width = 12;
+  int32 height = 13;
+  string alt_text = 14;
+  string created_at = 15;
+  string updated_at = 16;
+}
+
+message CreatePropertyMediaRequest {
+  int64 property_id = 1;
+  string media_type = 2;
+  string file_url = 3;
+  string thumbnail_url = 4;
+  string title = 5;
+  string description = 6;
+  int32 display_order = 7;
+  bool is_main = 8;
+  string file_size = 9;
+  string mime_type = 10;
+  int32 width = 11;
+  int32 height = 12;
+  string alt_text = 13;
+}
+
+message UpdatePropertyMediaRequest {
+  int64 id = 1;
+  string title = 2;
+  string description = 3;
+  int32 display_order = 4;
+  bool is_main = 5;
+  string alt_text = 6;
+}
+
+message GetPropertyMediaRequest {
+  int64 id = 1;
+}
+
+message DeletePropertyMediaRequest {
+  int64 id = 1;
+}
+
+message ListPropertyMediaRequest {
+  int64 property_id = 1;
+  string media_type = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message SetMainMediaRequest {
+  int64 id = 1;
+  int64 property_id = 2;
+}
+
+message PropertyMediaResponse {
+  PropertyMedia media = 1;
+  string message = 2;
+  bool success = 3;
+}
+
+message ListPropertyMediaResponse {
+  repeated PropertyMedia media = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  string message = 5;
+  bool success = 6;
+}
+
+message DeletePropertyMediaResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// PropertyValuation Messages
+message PropertyValuation {
+  int64 id = 1;
+  int64 property_id = 2;
+  string valuation_type = 3; // market, insurance, tax, appraisal
+  string valuation_amount = 4;
+  string currency = 5;
+  string valuation_date = 6;
+  string valid_until = 7;
+  string valuation_method = 8;
+  string appraiser_name = 9;
+  string appraiser_license = 10;
+  string notes = 11;
+  repeated string factors_considered = 12;
+  string market_conditions = 13;
+  bool is_certified = 14;
+  string certification_number = 15;
+  string created_at = 16;
+  string updated_at = 17;
+}
+
+message CreatePropertyValuationRequest {
+  int64 property_id = 1;
+  string valuation_type = 2;
+  string valuation_amount = 3;
+  string currency = 4;
+  string valuation_date = 5;
+  string valid_until = 6;
+  string valuation_method = 7;
+  string appraiser_name = 8;
+  string appraiser_license = 9;
+  string notes = 10;
+  repeated string factors_considered = 11;
+  string market_conditions = 12;
+  bool is_certified = 13;
+  string certification_number = 14;
+}
+
+message UpdatePropertyValuationRequest {
+  int64 id = 1;
+  string valuation_type = 2;
+  string valuation_amount = 3;
+  string currency = 4;
+  string valuation_date = 5;
+  string valid_until = 6;
+  string valuation_method = 7;
+  string appraiser_name = 8;
+  string appraiser_license = 9;
+  string notes = 10;
+  repeated string factors_considered = 11;
+  string market_conditions = 12;
+  bool is_certified = 13;
+  string certification_number = 14;
+}
+
+message GetPropertyValuationRequest {
+  int64 id = 1;
+}
+
+message DeletePropertyValuationRequest {
+  int64 id = 1;
+}
+
+message ListPropertyValuationsRequest {
+  int64 property_id = 1;
+  string valuation_type = 2;
+  bool is_certified = 3;
+  int32 page = 4;
+  int32 limit = 5;
+}
+
+message GetLatestValuationRequest {
+  int64 property_id = 1;
+  string valuation_type = 2;
+}
+
+message PropertyValuationResponse {
+  PropertyValuation valuation = 1;
+  string message = 2;
+  bool success = 3;
+}
+
+message ListPropertyValuationsResponse {
+  repeated PropertyValuation valuations = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  string message = 5;
+  bool success = 6;
+}
+
+message DeletePropertyValuationResponse {
+  string message = 1;
+  bool success = 2;
 }
